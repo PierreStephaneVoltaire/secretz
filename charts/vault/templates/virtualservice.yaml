@@ -1,0 +1,43 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: vault
+  namespace: {{ .Release.Namespace }}
+spec:
+  hosts:
+  - "vault-dev.example.com"
+  - "vault-uat.example.com"
+  - "vault-prod.example.com"
+  gateways:
+  - istio-system/ingressgateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+      authority:
+        exact: vault-dev.example.com
+    route:
+    - destination:
+        host: vault-dev
+        port:
+          number: 8200
+  - match:
+    - uri:
+        prefix: /
+      authority:
+        exact: vault-uat.example.com
+    route:
+    - destination:
+        host: vault-uat
+        port:
+          number: 8200
+  - match:
+    - uri:
+        prefix: /
+      authority:
+        exact: vault-prod.example.com
+    route:
+    - destination:
+        host: vault-prod
+        port:
+          number: 8200 

@@ -1,0 +1,60 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: vault
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      - env: dev
+        host: vault-dev.example.com
+        nodeId: vault-dev
+      - env: uat
+        host: vault-uat.example.com
+        nodeId: vault-uat
+      - env: prod
+        host: vault-prod.example.com
+        nodeId: vault-prod
+  template:
+    metadata:
+      name: 'vault-{{ env }}'
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/your-repo/vault-promoter
+        targetRevision: HEAD
+        path: charts/vault
+        helm:
+          values: |
+            server:
+              ingress:
+                hosts:
+                  - host: {{ host }}
+              ha:
+                config: |
+                  ui = true
+                  listener "tcp" {
+                    address = "[::]:8200"
+                    tls_disable = false
+                  }
+                  storage "raft" {
+                    path = "/vault/data"
+                    node_id = "{{ nodeId }}"
+                  }
+                  service_registration "kubernetes" {}
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: vault-{{ env }}
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+      ignoreDifferences:
+        - group: ""
+          kind: Secret
+          jsonPointers:
+            - /data 
