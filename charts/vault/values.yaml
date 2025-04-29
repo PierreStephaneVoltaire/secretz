@@ -18,15 +18,15 @@ server:
     annotations:
       kubernetes.io/ingress.class: istio
     hosts:
-      - host: vault-dev.example.com
+      - host: vault-dev.psvoltaire.ca
         paths:
           - path: /
             pathType: Prefix
-      - host: vault-uat.example.com
+      - host: vault-uat.psvoltaire.ca
         paths:
           - path: /
             pathType: Prefix
-      - host: vault-prod.example.com
+      - host: vault-prod.psvoltaire.ca
         paths:
           - path: /
             pathType: Prefix

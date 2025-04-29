@@ -1,12 +1,12 @@
-# Vault Promoter
+# Secret Promoter
 
-A GitOps-based solution for managing HashiCorp Vault instances across multiple environments with secret promotion capabilities.
+A solution for managing Secrets and Configs across multiple environments with secret promotion capabilities.
 
 ## Overview
 
 This repository contains the configuration and tooling for:
 - Deploying Vault instances across multiple environments (dev, uat, prod)
-- Managing secrets and configurations with proper RBAC
+- Managing secrets and configurations
 - Promoting secrets between environments
 - Providing a UI for secret comparison and promotion
 
