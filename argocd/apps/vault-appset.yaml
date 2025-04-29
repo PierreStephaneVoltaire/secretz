@@ -8,13 +8,13 @@ spec:
   - list:
       elements:
       - env: dev
-        host: vault-dev.example.com
+        host: vault-dev.psvoltaire.ca
         nodeId: vault-dev
       - env: uat
-        host: vault-uat.example.com
+        host: vault-uat.psvoltaire.ca
         nodeId: vault-uat
       - env: prod
-        host: vault-prod.example.com
+        host: vault-prod.psvoltaire.ca
         nodeId: vault-prod
   template:
     metadata:
@@ -23,7 +23,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/your-repo/vault-promoter
+        repoURL: https://github.com/PierreStephaneVoltaire/secretz.git
         targetRevision: HEAD
         path: charts/vault
         helm:

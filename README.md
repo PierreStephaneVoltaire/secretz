@@ -8,7 +8,6 @@ This repository contains the configuration and tooling for:
 - Deploying Vault instances across multiple environments (dev, uat, prod)
 - Managing secrets and configurations
 - Promoting secrets between environments
-- Providing a UI for secret comparison and promotion
 
 ## Architecture
 
@@ -22,8 +21,6 @@ This repository contains the configuration and tooling for:
 
 2. **RBAC Structure**
    - Environment-specific policies
-   - Kubernetes authentication
-   - Service account-based access control
 
 3. **Secret Management**
    - Path structure: `/appname/ENV/secret/*` and `/appname/ENV/config/*`
