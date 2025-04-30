@@ -1,0 +1,72 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: vault-gateway
+  namespace: argocd
+spec:
+  generators:
+  - list:
+      elements:
+      - env: dev
+        host: vault-dev.psvoltaire.ca
+      - env: uat
+        host: vault-uat.psvoltaire.ca
+      - env: prod
+        host: vault-prod.psvoltaire.ca
+  template:
+    metadata:
+      name: 'vault-gateway-{{ env }}'
+      namespace: argocd
+    spec:
+      project: default
+      source:
+        helm:
+          values: |
+            apiVersion: networking.istio.io/v1alpha3
+            kind: Gateway
+            metadata:
+              name: vault-gateway
+              namespace: vault-{{ env }}
+              annotations:
+                service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+                service.beta.kubernetes.io/aws-load-balancer-internal: "0.0.0.0/0"
+                service.beta.kubernetes.io/aws-load-balancer-subnets: "subnet-123456,subnet-789012,subnet-345678"
+                service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:region:account:certificate/your-certificate-id"
+                service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"
+            spec:
+              selector:
+                istio: ingressgateway
+              servers:
+              - port:
+                  number: 443
+                  name: https
+                  protocol: HTTPS
+                hosts:
+                - {{ host }}
+            ---
+            apiVersion: networking.istio.io/v1alpha3
+            kind: VirtualService
+            metadata:
+              name: vault-vs
+              namespace: vault-{{ env }}
+            spec:
+              hosts:
+              - {{ host }}
+              gateways:
+              - vault-gateway
+              http:
+              - match:
+                - uri:
+                    prefix: /
+                route:
+                - destination:
+                    host: vault.vault-{{ env }}.svc.cluster.local
+                    port:
+                      number: 8200
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: vault-{{ env }}
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
