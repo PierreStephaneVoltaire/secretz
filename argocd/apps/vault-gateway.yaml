@@ -24,7 +24,7 @@ spec:
         targetRevision: HEAD
         path: vault-gateway
         directory:
-          include: "vault-gateway-template.yaml"
+          include: "vault-gateway-template.jsonnet"
           jsonnet:
             extVars:
             - name: env
