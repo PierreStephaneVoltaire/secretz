@@ -1,9 +1,13 @@
 // Jsonnet template for Vault Gateway and VirtualService
-// Parameters:
+// External variables:
 // - env: environment name (dev, uat, prod)
 // - host: host for the gateway (e.g., vault-dev.psvoltaire.ca)
 
-function(env, host) [
+// Import external variables
+local env = std.extVar('env');
+local host = std.extVar('host');
+
+[
   {
     apiVersion: "networking.istio.io/v1",
     kind: "Gateway",
