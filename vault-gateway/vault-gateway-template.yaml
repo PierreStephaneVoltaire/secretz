@@ -1,0 +1,44 @@
+# Istio Gateway for Vault instances
+# This template is processed by ArgoCD ApplicationSet with jsonnet
+
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: vault-gateway
+  namespace: vault-{{ env }}
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "{{ config.awsLoadBalancer.type }}"
+    service.beta.kubernetes.io/aws-load-balancer-internal: "{{ config.awsLoadBalancer.internal }}"
+    service.beta.kubernetes.io/aws-load-balancer-subnets: "{{ config.awsLoadBalancer.subnets }}"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "{{ config.awsLoadBalancer.sslCert }}"
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "{{ config.awsLoadBalancer.sslPorts }}"
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    hosts:
+    - {{ host }}
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: vault-vs
+  namespace: vault-{{ env }}
+spec:
+  hosts:
+  - {{ host }}
+  gateways:
+  - vault-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: vault.vault-{{ env }}.svc.cluster.local
+        port:
+          number: 8200
