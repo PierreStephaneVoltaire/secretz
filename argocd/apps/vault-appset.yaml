@@ -23,16 +23,18 @@ spec:
     spec:
       project: default
       source:
+        repoURL: oci://ghcr.io/bank-vaults/helm-charts
+        targetRevision: 0.14.0
         helm:
-          chart: vault-operator
-          repository: oci://ghcr.io/bank-vaults/helm-charts
-          version: 0.14.0
-        values: |
-          vault:
-            ha:
-              enabled: true
-              replicas: 3
-            config: |
+          valueFiles:
+          - values.yaml
+          parameters:
+          - name: vault.ha.enabled
+            value: "true"
+          - name: vault.ha.replicas
+            value: "3"
+          - name: vault.config
+            value: |
               ui = true
               listener "tcp" {
                 address = "[::]:8200"
@@ -43,16 +45,16 @@ spec:
                 node_id = "{{ nodeId }}"
               }
               service_registration "kubernetes" {}
-            service:
-              annotations:
-                kubernetes.io/ingress.class: "istio"
-            serviceAccount:
-              create: true
-              name: vault-{{ env }}
-            ingress:
-              enabled: false
-              annotations:
-                kubernetes.io/ingress.class: "istio"
+          - name: vault.service.annotations.kubernetes.io/ingress.class
+            value: "istio"
+          - name: vault.serviceAccount.create
+            value: "true"
+          - name: vault.serviceAccount.name
+            value: "vault-{{ env }}"
+          - name: vault.ingress.enabled
+            value: "false"
+          - name: vault.ingress.annotations.kubernetes.io/ingress.class
+            value: "istio"
       destination:
         server: https://kubernetes.default.svc
         namespace: vault-{{ env }}
