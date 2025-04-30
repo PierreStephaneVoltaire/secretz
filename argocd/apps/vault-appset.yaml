@@ -23,27 +23,36 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/PierreStephaneVoltaire/secretz.git
-        targetRevision: HEAD
-        path: charts/vault
         helm:
-          values: |
-            server:
-              ingress:
-                hosts:
-                  - host: {{ host }}
-              ha:
-                config: |
-                  ui = true
-                  listener "tcp" {
-                    address = "[::]:8200"
-                    tls_disable = false
-                  }
-                  storage "raft" {
-                    path = "/vault/data"
-                    node_id = "{{ nodeId }}"
-                  }
-                  service_registration "kubernetes" {}
+          chart: vault-operator
+          repository: oci://ghcr.io/bank-vaults/helm-charts
+          version: 0.14.0
+        values: |
+          vault:
+            ha:
+              enabled: true
+              replicas: 3
+            config: |
+              ui = true
+              listener "tcp" {
+                address = "[::]:8200"
+                tls_disable = false
+              }
+              storage "raft" {
+                path = "/vault/data"
+                node_id = "{{ nodeId }}"
+              }
+              service_registration "kubernetes" {}
+            service:
+              annotations:
+                kubernetes.io/ingress.class: "istio"
+            serviceAccount:
+              create: true
+              name: vault-{{ env }}
+            ingress:
+              enabled: false
+              annotations:
+                kubernetes.io/ingress.class: "istio"
       destination:
         server: https://kubernetes.default.svc
         namespace: vault-{{ env }}
@@ -57,4 +66,4 @@ spec:
         - group: ""
           kind: Secret
           jsonPointers:
-            - /data 
+            - /data
