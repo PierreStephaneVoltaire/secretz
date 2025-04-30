@@ -39,7 +39,7 @@ local host = std.extVar('host');
           tls: {
             mode: "SIMPLE",
             credentialName: "aws-nlb-cert",
-            httpsRedirect: false 
+            httpsRedirect: false
           }
         }
       ]
