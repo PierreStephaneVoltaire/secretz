@@ -35,7 +35,12 @@ local host = std.extVar('host');
           },
           hosts: [
             host
-          ]
+          ],
+          tls: {
+            mode: "SIMPLE",
+            credentialName: "aws-nlb-cert",
+            httpsRedirect: false 
+          }
         }
       ]
     }
