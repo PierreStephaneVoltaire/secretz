@@ -31,11 +31,6 @@ spec:
               value: "{{ env }}"
             - name: host
               value: "{{ host }}"
-            - name: config
-              valueFrom:
-                secretKeyRef:
-                  name: vault-gateway-config
-                  key: values.yaml
       destination:
         server: https://kubernetes.default.svc
         namespace: vault-{{ env }}
