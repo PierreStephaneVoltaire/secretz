@@ -5,6 +5,7 @@ metadata:
   namespace: istio-system
   annotations:
     service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    app.kubernetes.io/managed-by: Helm
 spec:
   selector:
     istio: ingressgateway  
