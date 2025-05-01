@@ -11,9 +11,9 @@ spec:
   http:
     - route:
         - destination:
-            host: vault.vault-prod.svc.cluster.local
+            host: vault-prod-vault-operator.vault-prod.svc.cluster.local
             port:
-              number: 8200
+              number: 80
 ---
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
@@ -28,9 +28,9 @@ spec:
   http:
     - route:
         - destination:
-            host: vault.vault-uat.svc.cluster.local
+            host: vault-uat-vault-operator.vault-uat.svc.cluster.local
             port:
-              number: 8200
+              number: 80
 ---
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
@@ -45,6 +45,6 @@ spec:
   http:
     - route:
         - destination:
-            host: vault.vault-dev.svc.cluster.local
+            host: vault-dev-vault-operator.vault-dev.svc.cluster.local
             port:
-              number: 8200
+              number: 80
