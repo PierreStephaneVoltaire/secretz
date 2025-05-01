@@ -14,6 +14,10 @@ spec:
       number: 80
       name: http
       protocol: HTTP
+    hosts:
+      - vault-dev.psvoltaire.ca
+      - vault-uat.psvoltaire.ca
+      - vault-prod.psvoltaire.ca
   - port:
       number: 443
       name: https
