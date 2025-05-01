@@ -10,12 +10,9 @@ spec:
     istio: ingressgateway  
   servers:
   - port:
-      number: 443
-      name: https
-      protocol: HTTPS
-    tls:
-      mode: SIMPLE
-      credentialName: vault-tls  
+      number: 80
+      name: http
+      protocol: HTTP
     hosts:
     - vault-dev.psvoltaire.ca
     - vault-uat.psvoltaire.ca
