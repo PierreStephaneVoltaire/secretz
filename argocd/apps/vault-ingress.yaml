@@ -22,10 +22,10 @@ spec:
         repoURL: https://github.com/PierreStephaneVoltaire/secretz
         targetRevision: HEAD
         path: argocd/templates
-        helm:
-          values: |
-            env: {{ env }}
-            host: {{ host }}
+        directory:
+          recurse: false
+          configMapRef:
+            name: vault-virtualservice-template
       destination:
         server: https://kubernetes.default.svc
         namespace: vault-{{ env }}
