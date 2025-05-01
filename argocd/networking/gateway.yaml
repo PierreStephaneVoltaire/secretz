@@ -3,6 +3,8 @@ kind: Gateway
 metadata:
   name: vault-gateway
   namespace: istio-system
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
 spec:
   selector:
     istio: ingressgateway  
