@@ -12,6 +12,7 @@ metadata:
     service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:ca-central-1:429310424269:certificate/632ccd51-cdc6-453b-9f27-6133aa70685c"
     service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
     service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
+    app.kubernetes.io/managed-by: Helm
 spec:
   type: LoadBalancer
   selector:
