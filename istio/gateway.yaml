@@ -1,0 +1,20 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: vault-gateway
+  namespace: istio-system
+spec:
+  selector:
+    istio: ingressgateway  
+  servers:
+  - port:
+      number: 443
+      name: https
+      protocol: HTTPS
+    tls:
+      mode: SIMPLE
+      credentialName: vault-tls  
+    hosts:
+    - vault-dev.psvoltaire.ca
+    - vault-uat.psvoltaire.ca
+    - vault-prod.psvoltaire.ca
