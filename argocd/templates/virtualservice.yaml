@@ -1,0 +1,16 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: vault-{{ .Values.env }}
+  namespace: vault-{{ .Values.env }}
+spec:
+  hosts:
+    - {{ .Values.host }}
+  gateways:
+    - istio-system/vault-gateway
+  http:
+    - route:
+        - destination:
+            host: vault.vault-{{ .Values.env }}.svc.cluster.local
+            port:
+              number: 8200

@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: vault-virtualservices
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - env: dev
+            host: vault-dev.psvoltaire.ca
+          - env: uat
+            host: vault-uat.psvoltaire.ca
+          - env: prod
+            host: vault-prod.psvoltaire.ca
+  template:
+    metadata:
+      name: vault-virtualservice-{{ env }}
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/PierreStephaneVoltaire/secretz
+        targetRevision: HEAD
+        path: argocd/templates
+        helm:
+          values: |
+            env: {{ env }}
+            host: {{ host }}
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: vault-{{ env }}
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
