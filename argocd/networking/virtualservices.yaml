@@ -1,0 +1,50 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: vault-prod
+  namespace: vault-prod
+spec:
+  hosts:
+    - vault-prod.psvoltaire.ca
+  gateways:
+    - istio-system/vault-gateway
+  http:
+    - route:
+        - destination:
+            host: vault.vault-prod.svc.cluster.local
+            port:
+              number: 8200
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: vault-uat
+  namespace: vault-uat
+spec:
+  hosts:
+    - vault-uat.psvoltaire.ca
+  gateways:
+    - istio-system/vault-gateway
+  http:
+    - route:
+        - destination:
+            host: vault.vault-uat.svc.cluster.local
+            port:
+              number: 8200
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: vault-dev
+  namespace: vault-dev
+spec:
+  hosts:
+    - vault-dev.psvoltaire.ca
+  gateways:
+    - istio-system/vault-gateway
+  http:
+    - route:
+        - destination:
+            host: vault.vault-dev.svc.cluster.local
+            port:
+              number: 8200
