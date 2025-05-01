@@ -8,7 +8,7 @@ spec:
   source:
     repoURL: https://github.com/PierreStephaneVoltaire/secretz
     targetRevision: HEAD
-    path: argocd/templates
+    path: argocd/networking
     directory:
       recurse: true
   destination:
