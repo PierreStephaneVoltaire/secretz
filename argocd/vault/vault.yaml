@@ -145,7 +145,8 @@ metadata:
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
     alb.ingress.kubernetes.io/backend-protocol: "HTTPS"
     alb.ingress.kubernetes.io/scheme: "internet-facing"
-
+    alb.ingress.kubernetes.io/subnets: subnet-0f26715c99655dc08,subnet-0452a294e59e69c1,subnet-028c0e7290dd0a584
+    alb.ingress.kubernetes.io/target-type: "ip"
 spec:
   type: LoadBalancer
   selector:
