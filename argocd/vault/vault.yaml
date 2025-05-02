@@ -61,7 +61,6 @@ metadata:
     vault_cr: vault
 spec:
   size: 1
-
   image: hashicorp/vault:1.14.8
   annotations:
     common/annotation: "true"
@@ -100,11 +99,8 @@ spec:
       storeRootToken: true
       secretShares: 5
       secretThreshold: 3
-    AWSUnsealConfig:
-      kmsKeyId : "arn:aws:kms:ca-central-1:429310424269:key/b9940886-9174-4458-9bbe-e17640653f7c"
-      kmsRegion: "ca-central-1"
-
-
+    kubernetes:
+      secretNamespace: vault-dev
   config:
     storage:
       raft:
