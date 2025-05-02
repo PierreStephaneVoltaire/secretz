@@ -1,7 +1,7 @@
 apiVersion: networking.istio.io/v1
 kind: DestinationRule
 metadata:
-  name: vault-dev
+  name: vault
   namespace: vault-dev
 spec:
   host: vault.vault-dev.svc.cluster.local
@@ -22,6 +22,6 @@ spec:
   http:
     - route:
         - destination:
-            host: vault.vault-dev.svc.cluster.local
+            host: vault
             port:
               number: 8200
