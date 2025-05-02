@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: vault-operator
+  namespace: argocd
+spec:
+  project: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: vault
+  source:
+    repoURL: ghcr.io/bank-vaults/helm-charts
+    chart: vault-operator
+    targetRevision: 1.22.5
+    helm:
+      values: |
+        metricsPort: 8081 
+        watchNamespaces:
+          - vault-dev
+          - vault-uat
+          - vault-prod
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
