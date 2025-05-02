@@ -1,3 +1,13 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: vault-dev
+spec:
+  host: vault.vault-dev.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: SIMPLE
+---
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
@@ -11,9 +21,10 @@ spec:
   http:
     - route:
         - destination:
-            host: vault.vault-dev.svc.cluster.local
+            host: vault-dev
             port:
               number: 8200
       match:
         - uri:
+            port: https
             prefix: /
