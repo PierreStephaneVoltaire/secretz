@@ -2,8 +2,9 @@ apiVersion: networking.istio.io/v1alpha3
 kind: DestinationRule
 metadata:
   name: vault-dev
+  namespace: vault-dev
 spec:
-  host: vault.vault-dev.svc.cluster.local
+  host: vault
   trafficPolicy:
     tls:
       mode: SIMPLE
