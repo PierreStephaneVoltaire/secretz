@@ -58,7 +58,7 @@ metadata:
     app.kubernetes.io/name: vault
     vault_cr: vault
 spec:
-  size: 3
+  size: 0
   sealConfig:
     aws:
       kmsKeyId: "arn:aws:kms:ca-central-1:429310424269:key/b9940886-9174-4458-9bbe-e17640653f7c"
