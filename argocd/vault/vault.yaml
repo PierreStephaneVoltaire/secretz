@@ -61,13 +61,6 @@ metadata:
     vault_cr: vault
 spec:
   size: 3
-  ingress:
-    annotations:
-      alb.ingress.kubernetes.io/scheme: internet-facing
-      alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
-      alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ca-central-1:429310424269:certificate/632ccd51-cdc6-453b-9f27-6133aa70685c
-      alb.ingress.kubernetes.io/target-type: ip
-      alb.ingress.kubernetes.io/backend-protocol: HTTPS
   image: hashicorp/vault:1.14.8
   annotations:
     common/annotation: "true"
@@ -80,7 +73,7 @@ spec:
   vaultConfigurerLabels:
     example.com/log-format: "string"
   serviceAccount: vault
-  serviceType: ClusterIP
+  serviceType: LoadBalancer
   volumeClaimTemplates:
     - metadata:
         name: vault-raft
