@@ -1,46 +1,6 @@
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
-  name: vault-prod
-  namespace: vault-prod
-spec:
-  hosts:
-    - vault-prod.psvoltaire.ca
-  gateways:
-    - istio-system/vault-gateway
-  http:
-    - route:
-        - destination:
-            host: vault-prod-vault-operator.vault-prod.svc.cluster.local
-            port:
-              number: 80
-      match:
-        - uri:
-            prefix: /
----
-apiVersion: networking.istio.io/v1beta1
-kind: VirtualService
-metadata:
-  name: vault-uat
-  namespace: vault-uat
-spec:
-  hosts:
-    - vault-uat.psvoltaire.ca
-  gateways:
-    - istio-system/vault-gateway
-  http:
-    - route:
-        - destination:
-            host: vault-uat-vault-operator.vault-uat.svc.cluster.local
-            port:
-              number: 80
-      match:
-        - uri:
-            prefix: /
----
-apiVersion: networking.istio.io/v1beta1
-kind: VirtualService
-metadata:
   name: vault-dev
   namespace: vault-dev
 spec:
