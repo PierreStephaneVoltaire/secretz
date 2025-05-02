@@ -51,7 +51,7 @@ spec:
   http:
     - route:
         - destination:
-            host: vault-dev-vault-operator.vault-dev.svc.cluster.local
+            host: vault-dev.vault-0.svc.cluster.local
             port:
               number: 80
       match:

@@ -74,8 +74,6 @@ spec:
     example.com/log-format: "string"
   serviceAccount: vault
   serviceType: ClusterIP
-  ingress:
-    enabled: fale
   volumeClaimTemplates:
     - metadata:
         name: vault-raft
