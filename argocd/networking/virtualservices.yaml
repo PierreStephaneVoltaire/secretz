@@ -21,7 +21,7 @@ spec:
   http:
     - route:
         - destination:
-            host: vault-dev
+            host: vault
             port:
               number: 8200
       match:
