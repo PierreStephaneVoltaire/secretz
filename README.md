@@ -50,23 +50,7 @@ This repository contains the configuration and tooling for:
 - Helm 3.x
 - Go 1.21 or later
 
-### Deployment
 
-1. **Configure ArgoCD**
-   ```bash
-   # Create the vault namespace
-   kubectl create namespace vault
-   
-   # Apply the ApplicationSet
-   kubectl apply -f argocd/apps/vault-appset.yaml
-   ```
-
-2. **Initialize Vault**
-   After deployment, initialize and unseal each Vault instance:
-   ```bash
-   # For each environment (dev, uat, prod)
-   vault operator init -address=https://vault-{env}.example.com
-   ```
 
 ### RBAC Configuration
 
