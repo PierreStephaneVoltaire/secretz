@@ -21,7 +21,7 @@ spec:
   - port:
       number: 443
       name: https
-      protocol: HTTP
+      protocol: HTTPS
     hosts:
     - vault-dev.psvoltaire.ca
     - vault-uat.psvoltaire.ca
