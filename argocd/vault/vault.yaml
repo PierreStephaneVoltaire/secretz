@@ -62,6 +62,13 @@ metadata:
 spec:
   size: 3
   image: hashicorp/vault:1.14.8
+  service:
+    annotations:
+        alb.ingress.kubernetes.io/scheme: internet-facing
+        alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+        alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:ca-central-1:429310424269:certificate/632ccd51-cdc6-453b-9f27-6133aa70685c
+        alb.ingress.kubernetes.io/target-type: ip
+        alb.ingress.kubernetes.io/backend-protocol: HTTPS
   annotations:
     common/annotation: "true"
   vaultAnnotations:
