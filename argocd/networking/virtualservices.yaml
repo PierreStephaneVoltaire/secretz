@@ -53,7 +53,7 @@ spec:
         - destination:
             host: vault-dev.vault-0.svc.cluster.local
             port:
-              number: 80
+              number: 8200
       match:
         - uri:
             prefix: /
