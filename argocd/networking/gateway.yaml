@@ -16,8 +16,8 @@ spec:
       protocol: HTTPS
     tls:
         mode: SIMPLE
-        credentialName: wildcard-psvoltaire-tls
+        credentialName: istio-ca-secret
     hosts:
-    - vault-dev.psvoltaire.ca
-    - vault-uat.psvoltaire.ca
-    - vault-prod.psvoltaire.ca
+      - vault-dev.psvoltaire.ca
+      - vault-uat.psvoltaire.ca
+      - vault-prod.psvoltaire.ca
