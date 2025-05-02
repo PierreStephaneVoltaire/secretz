@@ -105,7 +105,7 @@ spec:
     listener:
       tcp:
         address: "0.0.0.0:8200"
-        tls_disabled: true
+        tls_disabled: "1"
     api_addr: http://vault.vault-dev:8200
     cluster_addr: "http://${.Env.POD_NAME}:8201"
     ui: true
