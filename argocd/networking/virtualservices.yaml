@@ -14,6 +14,9 @@ spec:
             host: vault-prod-vault-operator.vault-prod.svc.cluster.local
             port:
               number: 80
+      match:
+        - uri:
+            prefix: /
 ---
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
@@ -31,6 +34,9 @@ spec:
             host: vault-uat-vault-operator.vault-uat.svc.cluster.local
             port:
               number: 80
+      match:
+        - uri:
+            prefix: /
 ---
 apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
@@ -48,3 +54,6 @@ spec:
             host: vault-dev-vault-operator.vault-dev.svc.cluster.local
             port:
               number: 80
+      match:
+        - uri:
+            prefix: /
