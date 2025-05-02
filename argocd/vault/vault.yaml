@@ -61,6 +61,16 @@ metadata:
     vault_cr: vault
 spec:
   size: 3
+  ingress:
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "external"
+      service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip" 
+      service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+      service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:ca-central-1:429310424269:certificate/632ccd51-cdc6-453b-9f27-6133aa70685c"
+      service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
+      service.beta.kubernetes.io/aws-load-balancer-internal: "0.0.0.0/0"
+      service.beta.kubernetes.io/aws-load-balancer-subnets: "subnet-0f26715c99655dc08,subnet-0452a294e59e69c1f,subnet-028c0e7290dd0a584"
+      service.beta.kubernetes.io/aws-load-balancer-backend-protocol: tcp
   image: hashicorp/vault:1.14.8
   annotations:
     common/annotation: "true"
