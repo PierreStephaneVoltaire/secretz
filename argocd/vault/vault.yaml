@@ -141,11 +141,11 @@ metadata:
   name: vault-loadbalancer
   namespace: vault-dev
   annotations:
-    service.beta.kubernetes.io/aws-load-balancer-type: "alb"
-    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: "arn:aws:acm:ca-central-1:429310424269:certificate/632ccd51-cdc6-453b-9f27-6133aa70685c"
-    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "443"
-    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "HTTP"
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:ca-central-1:429310424269:certificate/632ccd51-cdc6-453b-9f27-6133aa70685c"
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/backend-protocol: "HTTPS"
     alb.ingress.kubernetes.io/scheme: "internet-facing"
+
 spec:
   type: LoadBalancer
   selector:
