@@ -4,7 +4,7 @@ metadata:
   name: vault-dev
   namespace: vault-dev
 spec:
-  host: vault
+  host: vault.vault-dev.svc.cluster.local
   trafficPolicy:
     tls:
       mode: SIMPLE
@@ -22,10 +22,6 @@ spec:
   http:
     - route:
         - destination:
-            host: vault-dev
+            host: vault.vault-dev.svc.cluster.local
             port:
               number: 8200
-      match:
-        - uri:
-            port: https
-            prefix: /
