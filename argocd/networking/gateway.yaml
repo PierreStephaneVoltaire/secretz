@@ -18,5 +18,6 @@ spec:
         mode: SIMPLE
         credentialName: wildcard-psvoltaire-tls
     hosts:
-      - "*.psvoltaire.ca"
-
+    - vault-dev.psvoltaire.ca
+    - vault-uat.psvoltaire.ca
+    - vault-prod.psvoltaire.ca
