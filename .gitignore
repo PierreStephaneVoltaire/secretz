@@ -9,7 +9,7 @@
 /vendor/
 /go.sum
 /go.work
-
+/.vaultconfigs
 # IDE - VSCode
 .vscode/*
 !.vscode/settings.json
