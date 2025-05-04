@@ -9,7 +9,75 @@ This repository contains the configuration and tooling for:
 - Managing secrets and configurations
 - Promoting secrets between environments
 
-## Architecture
+## 🔍 Use Case
+
+In companies with multiple environments like `dev`, `uat`, and `prod`, developers often lack read access to secrets and configurations in higher environments due to security restrictions. However, when issues arise in `uat` or `prod`, developers need a way to compare key-value configurations (including secrets) across environments to understand discrepancies—without needing to elevate privileges or involve DevOps or security teams.
+
+Applications often store sensitive values like API keys or passwords alongside non-sensitive configuration values in `.env` files or large JSON structures. Ideally, these should be separated, but that’s not always the case. Simply exposing all values from higher environments isn’t acceptable from a security standpoint.
+
+This tool provides two modes to address this challenge: an **unopinionated mode** and an **opinionated mode**.
+
+---
+
+### ⚙️ Unopinionated Mode
+
+This is the flexible and generic approach:
+
+- **No naming conventions or promotion flow is enforced.**
+- Allows comparison of any secret or config path with any other:
+    - Example: compare `/kv/app1/secrets` with `/prod/liveapp/secret`.
+- **Primarily a diffing tool**:
+    - Highlights missing keys, extra keys, and keys with differing values.
+    - Can diff between different environments, stores, or backend types (e.g., Vault, AWS Secrets Manager, Azure Key Vault).
+- **Secrets are redacted**
+  - visibility is determined by the access policies of the store itself.
+- **Does not support ad-hoc editing of secrets/configs**; users must manage changes through their own workflows.
+- **Supports full-copy promotion** of secrets/configs from one location to another.
+
+This mode is ideal for teams who already have guardrails in place and want flexible visibility without being locked into structure or process.
+
+---
+
+### 🔐 Opinionated Mode
+
+This mode introduces structure, redaction, and a controlled promotion flow:
+
+- **Assumes a consistent layout** in the key-value store:
+
+
+```txt
+
+{kvStore}/appName/dev/secrets
+{kvStore}/appName/dev/configs
+{kvStore}/appName/uat/secrets
+{kvStore}/appName/uat/configs
+...
+````
+
+- **Each environment has its own store instance** (e.g., `vault-dev`, `vault-uat`, `vault-prod`) and contains all environments' data.
+  - Possible total of 18 paths per app with 3 envs and 2 categories (secrets/configs).
+- **Redaction logic is enforced**:
+  - When diffing secrets from higher environments, values are shown as `(redacted)` unless access is explicitly granted.
+  - Only key names and diff indicators are shown to lower-privileged users.
+  - **RBAC is used for redaction decisions**, not direct access.
+- **Supports both intra-store and inter-store diffing**:
+  - Within the same store: `vault-dev` comparing `dev` vs `uat` secrets.
+  - Across stores: `vault-dev` vs `vault-prod` for the same app/env.
+- **Supports controlled promotion workflows**:
+  - Secrets and configs can be promoted from `dev` → `uat` → `prod`.
+  - Ad-hoc editing of higher environment values is not allowed.
+  - **Promotions happen from the dev store**:
+    - Devs, DBAs, or DevOps can set `uat` and `prod` values in the `dev` Vault.
+    - Later, the entire set of secrets/configs is promoted to the `uat` Vault.
+  - Promoting to `prod` must follow the same path (`dev → uat → prod`).
+
+This model enforces secure, structured management of secrets and configurations, aligns with change management practices, and enables developers to identify environment differences without exposing sensitive data.
+
+---
+
+This tool ensures visibility and change traceability while respecting environment boundaries, helping teams debug issues faster and manage secrets/configs more securely.
+
+
 
 ### Components
 
@@ -17,13 +85,11 @@ This repository contains the configuration and tooling for:
    - Deployed using Helm and managed by ArgoCD
    - Each environment (dev, uat, prod) has its own Vault instance
    - High availability with Raft storage
-   - Istio-based ingress with hostname routing
+   - ~~Istio-based ingress with hostname routing~~
 
-2. **RBAC Structure**
-   - Environment-specific policies
 
 3. **Secret Management**
-   - Path structure: `/appname/ENV/secret/*` and `/appname/ENV/config/*`
+   - Path structure: `{kvStoreName}/appname/ENV/secrets` and `{kvStoreName}/appname/ENV/configs`
    - Cross-environment visibility with value redaction
    - Promotion workflow between environments
 
@@ -32,9 +98,6 @@ This repository contains the configuration and tooling for:
 ```
 .
 ├── argocd/                 # ArgoCD configurations
-│   └── apps/              # Application definitions
-├── charts/                # Helm charts
-│   └── vault/            # Vault Helm chart
 ├── pkg/                   # Go packages
 │   └── vault/            # Vault client library
 └── cmd/                   # CLI tools
@@ -51,25 +114,6 @@ This repository contains the configuration and tooling for:
 - Go 1.21 or later
 
 
-
-### RBAC Configuration
-
-The RBAC structure is defined in the ApplicationSet and includes:
-
-- **Dev Environment**
-  - Read access to all environments
-  - Write access to dev environment
-  - Redacted values for uat/prod
-
-- **UAT Environment**
-  - Read access to all environments
-  - Write access to uat environment
-  - Redacted values for prod
-
-- **Prod Environment**
-  - Read access to all environments
-  - Write access to prod environment
-
 ## Usage
 
 ### CLI Tool
@@ -77,33 +121,26 @@ The RBAC structure is defined in the ApplicationSet and includes:
 The CLI tool provides commands for managing secrets:
 
 ```bash
-# Compare secrets between environments
-vault-promoter compare myapp uat
 
-# Promote secrets to another environment
-vault-promoter promote myapp uat /myapp/dev/secret/database
+Usage:
+  vault-promoter [command]
+
+Available Commands:
+  compare     Compare secrets between environments
+  help        Help about any command
+
+Flags:
+      --config string        Path to the vault configuration file (default "./.vaultconfigs")
+      --config-path string   Path suffix to use (config, configs, secret, secrets) (default "config")
+      --env string           Current environment (dev/uat/prod) (default "dev")
+  -h, --help                 help for vault-promoter
+      --kv-engine string     KV engine to use in Vault (default "kv")
+
+Use "vault-promoter [command] --help" for more information about a command.
+
 ```
 
-### API Usage
 
-```go
-client, err := vault.NewClient("https://vault-dev.example.com", "token", vault.EnvDev)
-if err != nil {
-    log.Fatal(err)
-}
-
-// Compare secrets
-comparison, err := client.CompareSecrets("myapp", vault.EnvUAT)
-if err != nil {
-    log.Fatal(err)
-}
-
-// Promote secrets
-err = client.PromoteSecret("myapp", vault.EnvUAT, "/myapp/dev/secret/database")
-if err != nil {
-    log.Fatal(err)
-}
-```
 
 ## Development
 

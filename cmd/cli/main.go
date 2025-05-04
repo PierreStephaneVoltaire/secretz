@@ -13,6 +13,8 @@ import (
 var (
 	env        string
 	configPath string
+	kvEngine   string
+	pathSuffix string
 )
 
 var rootCmd = &cobra.Command{
@@ -39,12 +41,12 @@ var compareCmd = &cobra.Command{
 			return fmt.Errorf("failed to get environment config: %w", err)
 		}
 
-		client, err := vault.NewClient(currentConfig.URL, currentConfig.Token, vault.Environment(env))
+		client, err := vault.NewClient(currentConfig.URL, currentConfig.Token, vault.Environment(env), kvEngine)
 		if err != nil {
 			return fmt.Errorf("failed to create vault client: %w", err)
 		}
 
-		comparison, err := client.CompareSecrets(appName, targetEnv)
+		comparison, err := client.CompareSecrets(appName, targetEnv, pathSuffix)
 		if err != nil {
 			return fmt.Errorf("failed to compare secrets: %w", err)
 		}
@@ -89,6 +91,8 @@ var compareCmd = &cobra.Command{
 func init() {
 	rootCmd.PersistentFlags().StringVar(&configPath, "config", "./.vaultconfigs", "Path to the vault configuration file")
 	rootCmd.PersistentFlags().StringVar(&env, "env", "dev", "Current environment (dev/uat/prod)")
+	rootCmd.PersistentFlags().StringVar(&kvEngine, "kv-engine", "kv", "KV engine to use in Vault")
+	rootCmd.PersistentFlags().StringVar(&pathSuffix, "config-path", "config", "Path suffix to use (config, configs, secret, secrets)")
 
 	cobra.OnInitialize(func() {
 		if !filepath.IsAbs(configPath) {
