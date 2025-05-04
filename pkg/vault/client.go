@@ -25,6 +25,7 @@ type SecretDiff struct {
 	Current    string
 	Target     string
 	IsRedacted bool
+	Status     string
 }
 type SecretComparison struct {
 	Path  string
@@ -79,14 +80,20 @@ func (c *Client) CompareSecrets(appName string, targetEnv Environment) (*SecretC
 	comparison := &SecretComparison{
 		Path: currentPath,
 	}
+
+	processedKeys := make(map[string]bool)
+
 	for key, currentValue := range currentSecrets.Data {
+		processedKeys[key] = true
 		targetValue, exists := targetSecrets.Data[key]
 		if !exists {
 			comparison.Diffs = append(comparison.Diffs, SecretDiff{
 				Key:        key,
 				Current:    fmt.Sprintf("%v", currentValue),
 				Target:     "",
-				IsRedacted: strings.HasSuffix(key, "secrets")})
+				IsRedacted: isRedactedKey(key),
+				Status:     "+",
+			})
 			continue
 		}
 		if fmt.Sprintf("%v", currentValue) != fmt.Sprintf("%v", targetValue) {
@@ -94,9 +101,28 @@ func (c *Client) CompareSecrets(appName string, targetEnv Environment) (*SecretC
 				Key:        key,
 				Current:    fmt.Sprintf("%v", currentValue),
 				Target:     fmt.Sprintf("%v", targetValue),
-				IsRedacted: strings.HasSuffix(key, "secrets")})
+				IsRedacted: isRedactedKey(key),
+			})
+		}
+	}
+
+	for key, targetValue := range targetSecrets.Data {
+		if _, exists := processedKeys[key]; !exists {
+			comparison.Diffs = append(comparison.Diffs, SecretDiff{
+				Key:        key,
+				Current:    "",
+				Target:     fmt.Sprintf("%v", targetValue),
+				IsRedacted: isRedactedKey(key),
+				Status:     "-",
+			})
 		}
 	}
 
 	return comparison, nil
+}
+
+func isRedactedKey(key string) bool {
+	return strings.HasSuffix(key, "secrets") ||
+		strings.HasSuffix(key, "confi") ||
+		strings.HasSuffix(key, "configs")
 }

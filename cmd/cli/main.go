@@ -2,15 +2,17 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/secretz/vault-promoter/pkg/config"
 	"github.com/secretz/vault-promoter/pkg/vault"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 var (
-	vaultAddr  string
-	vaultToken string
 	env        string
+	configPath string
 )
 
 var rootCmd = &cobra.Command{
@@ -27,7 +29,17 @@ var compareCmd = &cobra.Command{
 		appName := args[0]
 		targetEnv := vault.Environment(args[1])
 
-		client, err := vault.NewClient(vaultAddr, vaultToken, vault.Environment(env))
+		configs, err := config.ReadConfigs(configPath)
+		if err != nil {
+			return fmt.Errorf("failed to read config file: %w", err)
+		}
+
+		currentConfig, err := configs.GetEnvironmentConfig(env)
+		if err != nil {
+			return fmt.Errorf("failed to get environment config: %w", err)
+		}
+
+		client, err := vault.NewClient(currentConfig.URL, currentConfig.Token, vault.Environment(env))
 		if err != nil {
 			return fmt.Errorf("failed to create vault client: %w", err)
 		}
@@ -38,14 +50,35 @@ var compareCmd = &cobra.Command{
 		}
 
 		fmt.Printf("Comparing secrets for %s\n", comparison.Path)
+		fmt.Printf("Current Environment: %s | Target Environment: %s\n", env, string(targetEnv))
+		fmt.Println("----------------------------------------")
+
 		for _, diff := range comparison.Diffs {
-			fmt.Printf("Key: %s\n", diff.Key)
-			fmt.Printf("Current (%s): %s\n", env, diff.Current)
-			if diff.IsRedacted {
-				fmt.Printf("Target (%s): (redacted)\n", targetEnv)
-			} else {
-				fmt.Printf("Target: (%s) %s\n", targetEnv, diff.Target)
+			statusPrefix := "  "
+			if diff.Status == "+" {
+				statusPrefix = "+ "
+			} else if diff.Status == "-" {
+				statusPrefix = "- "
 			}
+
+			fmt.Printf("%sKey: %s\n", statusPrefix, diff.Key)
+
+			if diff.Current != "" {
+				if diff.IsRedacted {
+					fmt.Printf("%sCurrent (%s): (redacted)\n", statusPrefix, env)
+				} else {
+					fmt.Printf("%sCurrent (%s): %s\n", statusPrefix, env, diff.Current)
+				}
+			}
+
+			if diff.Target != "" {
+				if diff.IsRedacted {
+					fmt.Printf("%sTarget (%s): (redacted)\n", statusPrefix, targetEnv)
+				} else {
+					fmt.Printf("%sTarget (%s): %s\n", statusPrefix, targetEnv, diff.Target)
+				}
+			}
+
 			fmt.Println("---")
 		}
 
@@ -54,9 +87,15 @@ var compareCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringVar(&vaultAddr, "addr", "", "Vault server address")
-	rootCmd.PersistentFlags().StringVar(&vaultToken, "token", "", "Vault token")
+	rootCmd.PersistentFlags().StringVar(&configPath, "config", "./.vaultconfigs", "Path to the vault configuration file")
 	rootCmd.PersistentFlags().StringVar(&env, "env", "dev", "Current environment (dev/uat/prod)")
+
+	cobra.OnInitialize(func() {
+		if !filepath.IsAbs(configPath) {
+			cwd, _ := os.Getwd()
+			configPath = filepath.Join(cwd, configPath)
+		}
+	})
 
 	rootCmd.AddCommand(compareCmd)
 }

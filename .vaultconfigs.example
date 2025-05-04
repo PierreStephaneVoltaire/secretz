@@ -1,0 +1,16 @@
+{
+  "environments": {
+    "dev": {
+      "url": "https://vault-dev.example.com",
+      "token": "dev-vault-token"
+    },
+    "uat": {
+      "url": "https://vault-uat.example.com",
+      "token": "uat-vault-token"
+    },
+    "prod": {
+      "url": "https://vault-prod.example.com",
+      "token": "prod-vault-token"
+    }
+  }
+}
