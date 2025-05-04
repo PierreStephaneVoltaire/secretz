@@ -15,11 +15,11 @@ In companies with multiple environments like `dev`, `uat`, and `prod`, developer
 
 Applications often store sensitive values like API keys or passwords alongside non-sensitive configuration values in `.env` files or large JSON structures. Ideally, these should be separated, but that’s not always the case. Simply exposing all values from higher environments isn’t acceptable from a security standpoint.
 
-This tool provides two modes to address this challenge: an **unopinionated mode** and an **opinionated mode**.
+This tool provides two modes to address this challenge: an *un-opinionated mode** and an **multi-instance mode**.
 
 ---
 
-### ⚙️ Unopinionated Mode
+### ⚙️ Un-Opinionated Mode
 
 This is the flexible and generic approach:
 
@@ -38,7 +38,7 @@ This mode is ideal for teams who already have guardrails in place and want flexi
 
 ---
 
-### 🔐 Opinionated Mode
+### 🔐 multi-instance Mode
 
 This mode introduces structure, redaction, and a controlled promotion flow:
 
