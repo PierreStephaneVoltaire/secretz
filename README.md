@@ -92,7 +92,7 @@ These flags apply to all commands:
 
 - `--config` (string, default: `./.vaultconfigs`)
   - Path to the vault configuration file. This file defines all environments, store types, redaction settings, and sensitive keys.
-  - Example: `--config ./myconfigs/vault.json`
+  - Example: `--config ./my_folder/.vaultconfigs`
 
 #### Command: `compare`
 
