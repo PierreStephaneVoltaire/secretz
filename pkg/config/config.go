@@ -9,18 +9,18 @@ import (
 
 // EnvironmentConfig represents a Vault environment configuration
 type EnvironmentConfig struct {
-	URL       string `json:"url"`
-	TokenEnv  string `json:"token_env"`
-	Store     string `json:"store"`
-	Role      string `json:"role,omitempty"`
+	URL      string `json:"url"`
+	TokenEnv string `json:"token_env"`
+	Store    string `json:"store"`
+	Role     string `json:"role,omitempty"`
 }
 
 // Configs represents the entire configuration file
 type Configs struct {
-	Environments      map[string]EnvironmentConfig `json:"environments"`
-	RedactedKeys      []string                     `json:"redacted_keys,omitempty"`
-	RedactSecrets     *bool                        `json:"redact_secrets,omitempty"`
-	RedactJSONValues  *bool                        `json:"redact_json_values,omitempty"`
+	Environments     map[string]EnvironmentConfig `json:"environments"`
+	RedactedKeys     []string                     `json:"redacted_keys,omitempty"`
+	RedactSecrets    *bool                        `json:"redact_secrets,omitempty"`
+	RedactJSONValues *bool                        `json:"redact_json_values,omitempty"`
 }
 
 // DefaultRedactedKeys is a list of key names that typically contain sensitive information

@@ -32,7 +32,7 @@ var compareCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sourcePath := args[0]
 		targetPath := args[1]
-		
+
 		// If target-env flag is provided, use CompareVaultInstances instead of CompareSecrets
 		// This allows comparing across different Vault instances
 		useTargetEnv := targetEnv != ""
@@ -63,7 +63,7 @@ var compareCmd = &cobra.Command{
 			fmt.Printf("Source Path: %s | Target Path: %s\n", sourcePath, targetPath)
 			fmt.Printf("Source Environment: %s\n", env)
 			fmt.Println("----------------------------------------")
-			
+
 			// Print comparison results
 			for _, diff := range comparison.Diffs {
 				statusPrefix := "  "
@@ -95,38 +95,38 @@ var compareCmd = &cobra.Command{
 			}
 			return nil
 		}
-		
+
 		// Use CompareVaultInstances for cross-instance comparison
 		// If targetKV is not specified, use the same KV engine
 		targetKVToUse := kvEngine
 		if targetKV != "" {
 			targetKVToUse = targetKV
 		}
-		
+
 		// Use the source instance name as the current environment
 		// and the target instance name as the target environment
 		result, err := vault.CompareVaultInstances(
-			env,                // sourceInstanceName
-			targetEnv,         // targetInstanceName
-			sourcePath,        // configPath (full path to source secret)
-			env,              // sourceEnv
-			kvEngine,          // kvEngine
-			targetPath,        // targetConfigPath (full path to target secret)
-			targetEnv,         // targetEnv
-			targetKVToUse,      // targetKVEngine
+			env,           // sourceInstanceName
+			targetEnv,     // targetInstanceName
+			sourcePath,    // configPath (full path to source secret)
+			env,           // sourceEnv
+			kvEngine,      // kvEngine
+			targetPath,    // targetConfigPath (full path to target secret)
+			targetEnv,     // targetEnv
+			targetKVToUse, // targetKVEngine
 			configs,
 		)
 		if err != nil {
 			return fmt.Errorf("failed to compare vault instances: %w", err)
 		}
-		
+
 		// Print the results
 		fmt.Printf("Source Path: %s | Target Path: %s\n", result.SourcePath, result.TargetPath)
 		fmt.Printf("Source Instance: %s | Target Instance: %s\n", env, targetEnv)
 		fmt.Printf("Source Env: %s | Target Env: %s\n", result.SourceEnv, result.TargetEnv)
 		fmt.Printf("Source KV Engine: %s | Target KV Engine: %s\n", result.SourceKVEngine, result.TargetKVEngine)
 		fmt.Println("----------------------------------------")
-		
+
 		// Print missing secrets
 		if len(result.MissingInSource) > 0 {
 			fmt.Printf("\nSecrets missing in source instance (%s):\n", env)
@@ -146,7 +146,7 @@ var compareCmd = &cobra.Command{
 			fmt.Println("\nNo differences found!")
 			return nil
 		}
-		
+
 		// Print the comparisons
 		for _, comparison := range result.Comparisons {
 			fmt.Printf("\nComparison for: %s\n", comparison.Path)
@@ -201,7 +201,6 @@ var compareCmd = &cobra.Command{
 
 		return nil
 
-	
 	},
 }
 

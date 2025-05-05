@@ -165,13 +165,13 @@ func (c *Client) CompareSecrets(appName string, targetEnv Environment, pathSuffi
 		for key, targetValue := range targetSecrets.Data {
 			targetValueStr := fmt.Sprintf("%v", targetValue)
 			redacted := c.isRedactedKey(key)
-			
+
 			// Check if value is JSON and should be redacted
 			redactedJSON, isJSON := c.TryParseAndRedactJSON(targetValueStr)
 			if isJSON {
 				targetValueStr = redactedJSON
 			}
-			
+
 			comparison.Diffs = append(comparison.Diffs, SecretDiff{
 				Key:        key,
 				Current:    "", // No current value
@@ -198,13 +198,13 @@ func (c *Client) CompareSecrets(appName string, targetEnv Environment, pathSuffi
 		for key, currentValue := range currentSecrets.Data {
 			currentValueStr := fmt.Sprintf("%v", currentValue)
 			redacted := c.isRedactedKey(key)
-			
+
 			// Check if value is JSON and should be redacted
 			redactedJSON, isJSON := c.TryParseAndRedactJSON(currentValueStr)
 			if isJSON {
 				currentValueStr = redactedJSON
 			}
-			
+
 			comparison.Diffs = append(comparison.Diffs, SecretDiff{
 				Key:        key,
 				Current:    currentValueStr,
@@ -238,13 +238,13 @@ func (c *Client) CompareSecrets(appName string, targetEnv Environment, pathSuffi
 		targetValueStr := fmt.Sprintf("%v", targetValue)
 
 		redacted := c.isRedactedKey(key)
-		
+
 		// Check if values are JSON and should be redacted
 		redactedCurrentJSON, isCurrentJSON := c.TryParseAndRedactJSON(currentValueStr)
 		if isCurrentJSON {
 			currentValueStr = redactedCurrentJSON
 		}
-		
+
 		redactedTargetJSON, isTargetJSON := c.TryParseAndRedactJSON(targetValueStr)
 		if isTargetJSON {
 			targetValueStr = redactedTargetJSON
@@ -256,7 +256,7 @@ func (c *Client) CompareSecrets(appName string, targetEnv Environment, pathSuffi
 			if !redacted {
 				diffText = GenerateDiff(currentValueStr, targetValueStr)
 			}
-			
+
 			comparison.Diffs = append(comparison.Diffs, SecretDiff{
 				Key:        key,
 				Current:    currentValueStr,
@@ -287,7 +287,7 @@ func (c *Client) isRedactedKey(key string) bool {
 	if !c.redactSecrets {
 		return false
 	}
-	
+
 	lowerKey := strings.ToLower(key)
 	for _, redactedKey := range c.redactedKeys {
 		if strings.Contains(lowerKey, strings.ToLower(redactedKey)) {

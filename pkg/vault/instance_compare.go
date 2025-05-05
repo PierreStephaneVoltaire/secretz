@@ -28,12 +28,12 @@ func CompareVaultInstances(sourceInstanceName, targetInstanceName, configPath, s
 	if targetEnv == "" {
 		targetEnv = sourceEnv
 	}
-	
+
 	// If target KV engine not specified, use the same as source
 	if targetKVEngine == "" {
 		targetKVEngine = kvEngine
 	}
-	
+
 	// If target config path not specified, use the same as source
 	if targetConfigPath == "" {
 		targetConfigPath = configPath
@@ -65,14 +65,14 @@ func CompareVaultInstances(sourceInstanceName, targetInstanceName, configPath, s
 
 	// Initialize result
 	result := &InstanceComparisonResult{
-		SourcePath:      configPath,
-		TargetPath:      targetConfigPath,
-		SourceEnv:       sourceEnv,
-		TargetEnv:       targetEnv,
-		SourceKVEngine:  kvEngine,
-		TargetKVEngine:  targetKVEngine,
-		SourceInstance:  sourceInstanceName,
-		TargetInstance:  targetInstanceName,
+		SourcePath:     configPath,
+		TargetPath:     targetConfigPath,
+		SourceEnv:      sourceEnv,
+		TargetEnv:      targetEnv,
+		SourceKVEngine: kvEngine,
+		TargetKVEngine: targetKVEngine,
+		SourceInstance: sourceInstanceName,
+		TargetInstance: targetInstanceName,
 	}
 
 	// Try to get source secrets
@@ -123,13 +123,13 @@ func CompareVaultInstances(sourceInstanceName, targetInstanceName, configPath, s
 		for key, targetValue := range targetSecret.Data {
 			targetValueStr := fmt.Sprintf("%v", targetValue)
 			redacted := targetClient.isRedactedKey(key)
-			
+
 			// Check if value is JSON and should be redacted
 			redactedJSON, isJSON := targetClient.TryParseAndRedactJSON(targetValueStr)
 			if isJSON {
 				targetValueStr = redactedJSON
 			}
-			
+
 			comparison.Diffs = append(comparison.Diffs, SecretDiff{
 				Key:        key,
 				Current:    "", // No source value
@@ -159,13 +159,13 @@ func CompareVaultInstances(sourceInstanceName, targetInstanceName, configPath, s
 		for key, sourceValue := range sourceSecret.Data {
 			sourceValueStr := fmt.Sprintf("%v", sourceValue)
 			redacted := sourceClient.isRedactedKey(key)
-			
+
 			// Check if value is JSON and should be redacted
 			redactedJSON, isJSON := sourceClient.TryParseAndRedactJSON(sourceValueStr)
 			if isJSON {
 				sourceValueStr = redactedJSON
 			}
-			
+
 			comparison.Diffs = append(comparison.Diffs, SecretDiff{
 				Key:        key,
 				Current:    sourceValueStr,
@@ -188,13 +188,13 @@ func CompareVaultInstances(sourceInstanceName, targetInstanceName, configPath, s
 		if !exists {
 			sourceValueStr := fmt.Sprintf("%v", sourceValue)
 			redacted := sourceClient.isRedactedKey(key)
-			
+
 			// Check if value is JSON and should be redacted
 			redactedJSON, isJSON := sourceClient.TryParseAndRedactJSON(sourceValueStr)
 			if isJSON {
 				sourceValueStr = redactedJSON
 			}
-			
+
 			comparison.Diffs = append(comparison.Diffs, SecretDiff{
 				Key:        key,
 				Current:    sourceValueStr,
@@ -209,13 +209,13 @@ func CompareVaultInstances(sourceInstanceName, targetInstanceName, configPath, s
 		targetValueStr := fmt.Sprintf("%v", targetValue)
 
 		redacted := sourceClient.isRedactedKey(key)
-		
+
 		// Check if values are JSON and should be redacted
 		redactedCurrentJSON, isCurrentJSON := sourceClient.TryParseAndRedactJSON(currentValueStr)
 		if isCurrentJSON {
 			currentValueStr = redactedCurrentJSON
 		}
-		
+
 		redactedTargetJSON, isTargetJSON := targetClient.TryParseAndRedactJSON(targetValueStr)
 		if isTargetJSON {
 			targetValueStr = redactedTargetJSON
@@ -227,7 +227,7 @@ func CompareVaultInstances(sourceInstanceName, targetInstanceName, configPath, s
 			if !redacted {
 				diffText = GenerateDiff(currentValueStr, targetValueStr)
 			}
-			
+
 			comparison.Diffs = append(comparison.Diffs, SecretDiff{
 				Key:        key,
 				Current:    currentValueStr,
@@ -243,13 +243,13 @@ func CompareVaultInstances(sourceInstanceName, targetInstanceName, configPath, s
 		if _, exists := processedKeys[key]; !exists {
 			targetValueStr := fmt.Sprintf("%v", targetValue)
 			redacted := targetClient.isRedactedKey(key)
-			
+
 			// Check if value is JSON and should be redacted
 			redactedJSON, isJSON := targetClient.TryParseAndRedactJSON(targetValueStr)
 			if isJSON {
 				targetValueStr = redactedJSON
 			}
-			
+
 			comparison.Diffs = append(comparison.Diffs, SecretDiff{
 				Key:        key,
 				Current:    "",
