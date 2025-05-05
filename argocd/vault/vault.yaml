@@ -101,8 +101,8 @@ spec:
     options:
       preFlightChecks: true
       storeRootToken: true
-      secretShares: 3
-      secretThreshold: 2
+      secretShares: 5
+      secretThreshold: 3
     kubernetes:
       secretNamespace: vault-dev
   config:
