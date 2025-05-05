@@ -1,4 +1,4 @@
-# Secret Promoter
+# vault-promoter 
 
 A solution for managing Secrets and Configs across multiple environments with secret promotion capabilities.
 
@@ -20,7 +20,6 @@ Applications often store sensitive values like API keys or passwords alongside n
 
 ### ⚙️ Un-Opinionated Mode
 
-This is the flexible and generic approach:
 
 - **No naming conventions or promotion flow is enforced.**
 - Allows comparison of any secret or config path with any other:
@@ -30,10 +29,7 @@ This is the flexible and generic approach:
     - Can diff between different environments, stores, or backend types (e.g., Vault, AWS Secrets Manager, Azure Key Vault).
 - **Secrets are redacted**
   - Visibility is determined by the access policies of the store itself and the redaction configuration (see `.vaultconfigs.example`).
-- **Does not support ad-hoc editing of secrets/configs**; users must manage changes through their own workflows.
 - **Supports full-copy promotion** of secrets/configs from one location to another.
-
-This mode is ideal for teams who already have guardrails in place and want flexible visibility without being locked into structure or process.
 
 ---
 
