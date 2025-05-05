@@ -4,7 +4,6 @@ metadata:
   name: vault
   namespace: vault-dev
 
-
 ---
 
 kind: Role
@@ -60,7 +59,7 @@ metadata:
     app.kubernetes.io/name: vault
     vault_cr: vault
 spec:
-  size: 3
+  size: 1
   ingress:
     annotations:
       kubernetes.io/ingress.class: "alb"
@@ -102,8 +101,8 @@ spec:
     options:
       preFlightChecks: true
       storeRootToken: true
-      secretShares: 5
-      secretThreshold: 3
+      secretShares: 3
+      secretThreshold: 2
     kubernetes:
       secretNamespace: vault-dev
   config:
@@ -123,11 +122,18 @@ spec:
   resources:
     vault:
       limits:
-        memory: "512Mi"
-        cpu: "200m"
-      requests:
         memory: "256Mi"
         cpu: "100m"
+      requests:
+        memory: "128Mi"
+        cpu: "50m"
+    vaultConfigurer:
+      limits:
+        memory: "128Mi"
+        cpu: "50m"
+      requests:
+        memory: "64Mi"
+        cpu: "25m"
   externalConfig:
     policies:
       - name: allow_secrets
@@ -137,7 +143,6 @@ spec:
     auth:
       - type: kubernetes
         roles:
-          # Allow every pod in the default namespace to use the secret kv store
           - name: default
             bound_service_account_names: ["default", "secrets-webhook"]
             bound_service_account_namespaces: ["default", "vswh"]
