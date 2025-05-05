@@ -74,7 +74,8 @@ spec:
     spec:
       ingressClassName: alb
       rules:
-        - http:
+        - host: vault.psvoltaire.ca
+          http:
             paths:
               - path: /uat
                 pathType: Prefix

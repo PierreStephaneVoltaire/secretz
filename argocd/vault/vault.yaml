@@ -71,6 +71,19 @@ spec:
       alb.ingress.kubernetes.io/scheme: "internet-facing"
       alb.ingress.kubernetes.io/subnets: "subnet-0f26715c99655dc08 ,subnet-0452a294e59e69c1f,subnet-028c0e7290dd0a584"
       alb.ingress.kubernetes.io/target-type: "ip"
+    spec:
+      ingressClassName: alb
+      rules:
+        - host: vault.example.com
+          http:
+            paths:
+              - path: /dev
+                pathType: Prefix
+                backend:
+                  service:
+                    name: vault
+                    port:
+                      number: 8200
   image: hashicorp/vault:1.14.8
   annotations:
     common/annotation: "true"
