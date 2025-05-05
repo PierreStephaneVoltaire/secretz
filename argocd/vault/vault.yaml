@@ -120,10 +120,6 @@ spec:
   statsdDisabled: true
   serviceRegistrationEnabled: true
   resources:
-    vault:
-      limits:
-        memory: "512Mi"
-        cpu: "200m"
     vaultConfigurer:
       limits:
         memory: "128Mi"
