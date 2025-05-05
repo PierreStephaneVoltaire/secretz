@@ -59,7 +59,7 @@ metadata:
     app.kubernetes.io/name: vault
     vault_cr: vault
 spec:
-  size: 1
+  size: 3
   ingress:
     annotations:
       kubernetes.io/ingress.class: "alb"
