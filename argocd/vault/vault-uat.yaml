@@ -64,6 +64,7 @@ spec:
     annotations:
       kubernetes.io/ingress.class: "alb"
       alb.ingress.kubernetes.io/load-balancer-name: "vault-alb"
+      alb.ingress.kubernetes.io/group.name: "vault-alb"
       alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:ca-central-1:429310424269:certificate/632ccd51-cdc6-453b-9f27-6133aa70685c"
       alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":8443}]'
       alb.ingress.kubernetes.io/backend-protocol: "HTTPS"
