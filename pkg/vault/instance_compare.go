@@ -9,10 +9,12 @@ import (
 
 // InstanceComparisonResult holds the result of comparing secrets between two Vault instances
 type InstanceComparisonResult struct {
-	App             string
-	Environment     string
-	KVEngine        string
-	PathSuffix      string
+	SourcePath      string
+	TargetPath      string
+	SourceEnv       string
+	TargetEnv       string
+	SourceKVEngine  string
+	TargetKVEngine  string
 	Comparisons     []*SecretComparison
 	SourceInstance  string
 	TargetInstance  string
@@ -21,30 +23,20 @@ type InstanceComparisonResult struct {
 }
 
 // CompareVaultInstances compares secrets between two Vault instances
-func CompareVaultInstances(sourceInstanceName, targetInstanceName, appName, environment, kvEngine, pathSuffix string, configs *config.Configs) (*InstanceComparisonResult, error) {
-	// Validate path suffix
-	validPaths := []string{"config", "configs", "secret", "secrets"}
-	isValidPath := false
-	for _, p := range validPaths {
-		if p == pathSuffix {
-			isValidPath = true
-			break
-		}
+func CompareVaultInstances(sourceInstanceName, targetInstanceName, configPath, sourceEnv, kvEngine, targetConfigPath, targetEnv, targetKVEngine string, configs *config.Configs) (*InstanceComparisonResult, error) {
+	// If target env not specified, use the same as source
+	if targetEnv == "" {
+		targetEnv = sourceEnv
 	}
-	if !isValidPath {
-		return nil, fmt.Errorf("invalid path suffix: %s, must be one of: config, configs, secret, secrets", pathSuffix)
+	
+	// If target KV engine not specified, use the same as source
+	if targetKVEngine == "" {
+		targetKVEngine = kvEngine
 	}
-
-	// Validate environment values
-	validEnv := false
-	for _, e := range []Environment{EnvDev, EnvUAT, EnvProd} {
-		if string(e) == environment {
-			validEnv = true
-			break
-		}
-	}
-	if !validEnv {
-		return nil, fmt.Errorf("invalid environment: %s, must be one of: dev, uat, prod", environment)
+	
+	// If target config path not specified, use the same as source
+	if targetConfigPath == "" {
+		targetConfigPath = configPath
 	}
 
 	// Get source instance config
@@ -60,32 +52,31 @@ func CompareVaultInstances(sourceInstanceName, targetInstanceName, appName, envi
 	}
 
 	// Create source client
-	sourceClient, err := NewClient(sourceConfig.URL, sourceConfig.Token, Environment(environment), kvEngine)
+	sourceClient, err := NewClient(sourceConfig, configs, Environment(sourceEnv), kvEngine)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create source client: %w", err)
 	}
 
 	// Create target client
-	targetClient, err := NewClient(targetConfig.URL, targetConfig.Token, Environment(environment), kvEngine)
+	targetClient, err := NewClient(targetConfig, configs, Environment(targetEnv), targetKVEngine)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create target client: %w", err)
 	}
 
 	// Initialize result
 	result := &InstanceComparisonResult{
-		App:            appName,
-		Environment:    environment,
-		KVEngine:       kvEngine,
-		PathSuffix:     pathSuffix,
-		SourceInstance: sourceInstanceName,
-		TargetInstance: targetInstanceName,
+		SourcePath:      configPath,
+		TargetPath:      targetConfigPath,
+		SourceEnv:       sourceEnv,
+		TargetEnv:       targetEnv,
+		SourceKVEngine:  kvEngine,
+		TargetKVEngine:  targetKVEngine,
+		SourceInstance:  sourceInstanceName,
+		TargetInstance:  targetInstanceName,
 	}
 
-	// Path format: kv/app1/ENV/secret(s) or kv/app1/ENV/config(s)
-	path := fmt.Sprintf("%s/%s/%s", appName, environment, pathSuffix)
-
 	// Try to get source secrets
-	sourceSecret, sourceErr := sourceClient.GetSecret(path)
+	sourceSecret, sourceErr := sourceClient.GetSecret(configPath)
 	sourceExists := true
 	if sourceErr != nil {
 		if strings.Contains(sourceErr.Error(), "secret not found") {
@@ -96,7 +87,7 @@ func CompareVaultInstances(sourceInstanceName, targetInstanceName, appName, envi
 	}
 
 	// Try to get target secrets
-	targetSecret, targetErr := targetClient.GetSecret(path)
+	targetSecret, targetErr := targetClient.GetSecret(targetConfigPath)
 	targetExists := true
 	if targetErr != nil {
 		if strings.Contains(targetErr.Error(), "secret not found") {
@@ -108,12 +99,12 @@ func CompareVaultInstances(sourceInstanceName, targetInstanceName, appName, envi
 
 	// If neither exists, return an error
 	if !sourceExists && !targetExists {
-		return nil, fmt.Errorf("secret %s doesn't exist in both vault instances", path)
+		return nil, fmt.Errorf("secrets don't exist in both vault instances at paths %s and %s", configPath, targetConfigPath)
 	}
 
 	// Create a comparison
 	comparison := &SecretComparison{
-		Path: path,
+		Path: configPath,
 	}
 
 	// Handle case where the secret exists only in target
@@ -126,15 +117,24 @@ func CompareVaultInstances(sourceInstanceName, targetInstanceName, appName, envi
 			Status:     "-",
 		})
 
-		result.MissingInSource = append(result.MissingInSource, path)
+		result.MissingInSource = append(result.MissingInSource, configPath)
 
 		// Add all target values
 		for key, targetValue := range targetSecret.Data {
+			targetValueStr := fmt.Sprintf("%v", targetValue)
+			redacted := targetClient.isRedactedKey(key)
+			
+			// Check if value is JSON and should be redacted
+			redactedJSON, isJSON := targetClient.TryParseAndRedactJSON(targetValueStr)
+			if isJSON {
+				targetValueStr = redactedJSON
+			}
+			
 			comparison.Diffs = append(comparison.Diffs, SecretDiff{
 				Key:        key,
 				Current:    "", // No source value
-				Target:     fmt.Sprintf("%v", targetValue),
-				IsRedacted: isRedactedKey(key) || strings.Contains(pathSuffix, "secret"),
+				Target:     targetValueStr,
+				IsRedacted: redacted,
 				Status:     "-",
 			})
 		}
@@ -153,15 +153,24 @@ func CompareVaultInstances(sourceInstanceName, targetInstanceName, appName, envi
 			Status:     "+",
 		})
 
-		result.MissingInTarget = append(result.MissingInTarget, path)
+		result.MissingInTarget = append(result.MissingInTarget, configPath)
 
 		// Add all source values
 		for key, sourceValue := range sourceSecret.Data {
+			sourceValueStr := fmt.Sprintf("%v", sourceValue)
+			redacted := sourceClient.isRedactedKey(key)
+			
+			// Check if value is JSON and should be redacted
+			redactedJSON, isJSON := sourceClient.TryParseAndRedactJSON(sourceValueStr)
+			if isJSON {
+				sourceValueStr = redactedJSON
+			}
+			
 			comparison.Diffs = append(comparison.Diffs, SecretDiff{
 				Key:        key,
-				Current:    fmt.Sprintf("%v", sourceValue),
+				Current:    sourceValueStr,
 				Target:     "", // No target value
-				IsRedacted: isRedactedKey(key) || strings.Contains(pathSuffix, "secret"),
+				IsRedacted: redacted,
 				Status:     "+",
 			})
 		}
@@ -177,25 +186,54 @@ func CompareVaultInstances(sourceInstanceName, targetInstanceName, appName, envi
 		processedKeys[key] = true
 		targetValue, exists := targetSecret.Data[key]
 		if !exists {
+			sourceValueStr := fmt.Sprintf("%v", sourceValue)
+			redacted := sourceClient.isRedactedKey(key)
+			
+			// Check if value is JSON and should be redacted
+			redactedJSON, isJSON := sourceClient.TryParseAndRedactJSON(sourceValueStr)
+			if isJSON {
+				sourceValueStr = redactedJSON
+			}
+			
 			comparison.Diffs = append(comparison.Diffs, SecretDiff{
 				Key:        key,
-				Current:    fmt.Sprintf("%v", sourceValue),
+				Current:    sourceValueStr,
 				Target:     "",
-				IsRedacted: isRedactedKey(key) || strings.Contains(pathSuffix, "secret"),
+				IsRedacted: redacted,
 				Status:     "+",
 			})
 			continue
 		}
 
-		sourceValueStr := fmt.Sprintf("%v", sourceValue)
+		currentValueStr := fmt.Sprintf("%v", sourceValue)
 		targetValueStr := fmt.Sprintf("%v", targetValue)
 
-		if sourceValueStr != targetValueStr {
+		redacted := sourceClient.isRedactedKey(key)
+		
+		// Check if values are JSON and should be redacted
+		redactedCurrentJSON, isCurrentJSON := sourceClient.TryParseAndRedactJSON(currentValueStr)
+		if isCurrentJSON {
+			currentValueStr = redactedCurrentJSON
+		}
+		
+		redactedTargetJSON, isTargetJSON := targetClient.TryParseAndRedactJSON(targetValueStr)
+		if isTargetJSON {
+			targetValueStr = redactedTargetJSON
+		}
+
+		if currentValueStr != targetValueStr {
+			// Generate diff only if not redacted
+			diffText := ""
+			if !redacted {
+				diffText = GenerateDiff(currentValueStr, targetValueStr)
+			}
+			
 			comparison.Diffs = append(comparison.Diffs, SecretDiff{
 				Key:        key,
-				Current:    sourceValueStr,
+				Current:    currentValueStr,
 				Target:     targetValueStr,
-				IsRedacted: isRedactedKey(key) || strings.Contains(pathSuffix, "secret"),
+				Diff:       diffText,
+				IsRedacted: redacted,
 				Status:     "*", // Modified value
 			})
 		}
@@ -203,11 +241,20 @@ func CompareVaultInstances(sourceInstanceName, targetInstanceName, appName, envi
 
 	for key, targetValue := range targetSecret.Data {
 		if _, exists := processedKeys[key]; !exists {
+			targetValueStr := fmt.Sprintf("%v", targetValue)
+			redacted := targetClient.isRedactedKey(key)
+			
+			// Check if value is JSON and should be redacted
+			redactedJSON, isJSON := targetClient.TryParseAndRedactJSON(targetValueStr)
+			if isJSON {
+				targetValueStr = redactedJSON
+			}
+			
 			comparison.Diffs = append(comparison.Diffs, SecretDiff{
 				Key:        key,
 				Current:    "",
-				Target:     fmt.Sprintf("%v", targetValue),
-				IsRedacted: isRedactedKey(key) || strings.Contains(pathSuffix, "secret"),
+				Target:     targetValueStr,
+				IsRedacted: redacted,
 				Status:     "-",
 			})
 		}

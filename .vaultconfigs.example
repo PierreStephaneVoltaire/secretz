@@ -2,15 +2,41 @@
   "environments": {
     "dev": {
       "url": "https://vault-dev.example.com",
-      "token": "dev-vault-token"
+      "token_env": "VAULT_SECREZ_DEV_TOKEN",
+      "store": "vault"
     },
     "uat": {
       "url": "https://vault-uat.example.com",
-      "token": "uat-vault-token"
+      "token_env": "VAULT_SECREZ_UAT_TOKEN",
+      "store": "vault"
     },
     "prod": {
       "url": "https://vault-prod.example.com",
-      "token": "prod-vault-token"
+      "token_env": "VAULT_SECREZ_PROD_TOKEN",
+      "store": "vault"
+    },
+    "staging": {
+      "store": "awssecretsmanager",
+      "role": "arn:aws:iam::123456789012:role/role-name"
     }
-  }
+  },
+  "redact_secrets": true,
+  "redact_json_values": false,
+  "redacted_keys": [
+    "password",
+    "secret",
+    "token",
+    "key",
+    "credential",
+    "auth",
+    "pwd",
+    "pass",
+    "apikey",
+    "api_key",
+    "access_key",
+    "secret_key",
+    "private_key",
+    "cert",
+    "certificate"
+  ]
 }

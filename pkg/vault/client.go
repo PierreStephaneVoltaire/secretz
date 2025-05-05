@@ -2,10 +2,14 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"strings"
 
 	vault "github.com/hashicorp/vault/api"
+	"github.com/secretz/vault-promoter/pkg/config"
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 type Environment string
@@ -18,14 +22,18 @@ const (
 
 type Client struct {
 	*vault.Client
-	env      Environment
-	kvEngine string
+	env            Environment
+	kvEngine       string
+	redactedKeys   []string
+	redactSecrets  bool
+	redactJSONVals bool
 }
 
 type SecretDiff struct {
 	Key        string
 	Current    string
 	Target     string
+	Diff       string
 	IsRedacted bool
 	Status     string // +, -, or * for added, removed, or modified
 }
@@ -34,21 +42,29 @@ type SecretComparison struct {
 	Diffs []SecretDiff
 }
 
-func NewClient(addr string, token string, env Environment, kvEngine string) (*Client, error) {
+func NewClient(envConfig *config.EnvironmentConfig, configs *config.Configs, env Environment, kvEngine string) (*Client, error) {
 	config := vault.DefaultConfig()
-	config.Address = addr
+	config.Address = envConfig.URL
 
 	client, err := vault.NewClient(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create vault client: %w", err)
 	}
 
+	token, err := envConfig.GetVaultToken()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get vault token: %w", err)
+	}
+
 	client.SetToken(token)
 
 	return &Client{
-		Client:   client,
-		env:      env,
-		kvEngine: kvEngine,
+		Client:         client,
+		env:            env,
+		kvEngine:       kvEngine,
+		redactedKeys:   configs.GetRedactedKeys(),
+		redactSecrets:  configs.ShouldRedactSecrets(),
+		redactJSONVals: configs.ShouldRedactJSONValues(),
 	}, nil
 }
 
@@ -147,11 +163,20 @@ func (c *Client) CompareSecrets(appName string, targetEnv Environment, pathSuffi
 
 		// List all target keys and values
 		for key, targetValue := range targetSecrets.Data {
+			targetValueStr := fmt.Sprintf("%v", targetValue)
+			redacted := c.isRedactedKey(key)
+			
+			// Check if value is JSON and should be redacted
+			redactedJSON, isJSON := c.TryParseAndRedactJSON(targetValueStr)
+			if isJSON {
+				targetValueStr = redactedJSON
+			}
+			
 			comparison.Diffs = append(comparison.Diffs, SecretDiff{
 				Key:        key,
 				Current:    "", // No current value
-				Target:     fmt.Sprintf("%v", targetValue),
-				IsRedacted: isRedactedKey(key) || strings.Contains(pathSuffix, "secret"),
+				Target:     targetValueStr,
+				IsRedacted: redacted,
 				Status:     "-",
 			})
 		}
@@ -171,11 +196,20 @@ func (c *Client) CompareSecrets(appName string, targetEnv Environment, pathSuffi
 
 		// List all current keys and values
 		for key, currentValue := range currentSecrets.Data {
+			currentValueStr := fmt.Sprintf("%v", currentValue)
+			redacted := c.isRedactedKey(key)
+			
+			// Check if value is JSON and should be redacted
+			redactedJSON, isJSON := c.TryParseAndRedactJSON(currentValueStr)
+			if isJSON {
+				currentValueStr = redactedJSON
+			}
+			
 			comparison.Diffs = append(comparison.Diffs, SecretDiff{
 				Key:        key,
-				Current:    fmt.Sprintf("%v", currentValue),
+				Current:    currentValueStr,
 				Target:     "", // No target value
-				IsRedacted: isRedactedKey(key) || strings.Contains(pathSuffix, "secret"),
+				IsRedacted: redacted,
 				Status:     "+",
 			})
 		}
@@ -194,7 +228,7 @@ func (c *Client) CompareSecrets(appName string, targetEnv Environment, pathSuffi
 				Key:        key,
 				Current:    fmt.Sprintf("%v", currentValue),
 				Target:     "",
-				IsRedacted: isRedactedKey(key) || strings.Contains(pathSuffix, "secret"),
+				IsRedacted: c.isRedactedKey(key) || strings.Contains(pathSuffix, "secret"),
 				Status:     "+",
 			})
 			continue
@@ -203,13 +237,33 @@ func (c *Client) CompareSecrets(appName string, targetEnv Environment, pathSuffi
 		currentValueStr := fmt.Sprintf("%v", currentValue)
 		targetValueStr := fmt.Sprintf("%v", targetValue)
 
+		redacted := c.isRedactedKey(key)
+		
+		// Check if values are JSON and should be redacted
+		redactedCurrentJSON, isCurrentJSON := c.TryParseAndRedactJSON(currentValueStr)
+		if isCurrentJSON {
+			currentValueStr = redactedCurrentJSON
+		}
+		
+		redactedTargetJSON, isTargetJSON := c.TryParseAndRedactJSON(targetValueStr)
+		if isTargetJSON {
+			targetValueStr = redactedTargetJSON
+		}
+
 		if currentValueStr != targetValueStr {
+			// Generate diff only if not redacted
+			diffText := ""
+			if !redacted {
+				diffText = GenerateDiff(currentValueStr, targetValueStr)
+			}
+			
 			comparison.Diffs = append(comparison.Diffs, SecretDiff{
 				Key:        key,
 				Current:    currentValueStr,
 				Target:     targetValueStr,
-				IsRedacted: isRedactedKey(key) || strings.Contains(pathSuffix, "secret"),
-				Status:     "*", // New status for modified values
+				Diff:       diffText,
+				IsRedacted: redacted,
+				Status:     "*", // Modified value
 			})
 		}
 	}
@@ -220,7 +274,7 @@ func (c *Client) CompareSecrets(appName string, targetEnv Environment, pathSuffi
 				Key:        key,
 				Current:    "",
 				Target:     fmt.Sprintf("%v", targetValue),
-				IsRedacted: isRedactedKey(key) || strings.Contains(pathSuffix, "secret"),
+				IsRedacted: c.isRedactedKey(key) || strings.Contains(pathSuffix, "secret"),
 				Status:     "-",
 			})
 		}
@@ -229,11 +283,206 @@ func (c *Client) CompareSecrets(appName string, targetEnv Environment, pathSuffi
 	return comparison, nil
 }
 
-func isRedactedKey(key string) bool {
-	return strings.HasSuffix(key, "secret") ||
-		strings.HasSuffix(key, "secrets") ||
-		strings.Contains(key, "password") ||
-		strings.Contains(key, "token") ||
-		strings.Contains(key, "key") ||
-		strings.Contains(key, "credential")
+func (c *Client) isRedactedKey(key string) bool {
+	if !c.redactSecrets {
+		return false
+	}
+	
+	lowerKey := strings.ToLower(key)
+	for _, redactedKey := range c.redactedKeys {
+		if strings.Contains(lowerKey, strings.ToLower(redactedKey)) {
+			return true
+		}
+	}
+	return false
+}
+
+// IsJSONValue checks if a string is a valid JSON object or array
+func IsJSONValue(s string) bool {
+	s = strings.TrimSpace(s)
+	return (strings.HasPrefix(s, "{") && strings.HasSuffix(s, "}")) || (strings.HasPrefix(s, "[") && strings.HasSuffix(s, "]"))
+}
+
+// RedactJSONValues recursively goes through a JSON object and redacts values with sensitive keys
+func (c *Client) RedactJSONValues(data interface{}) interface{} {
+	if !c.redactJSONVals {
+		return data
+	}
+
+	switch v := data.(type) {
+	case map[string]interface{}:
+		result := make(map[string]interface{})
+		for key, value := range v {
+			if c.isRedactedKey(key) {
+				result[key] = "****"
+			} else {
+				result[key] = c.RedactJSONValues(value)
+			}
+		}
+		return result
+	case []interface{}:
+		result := make([]interface{}, len(v))
+		for i, item := range v {
+			result[i] = c.RedactJSONValues(item)
+		}
+		return result
+	default:
+		return v
+	}
+}
+
+// CompareSecretPaths compares secrets between two full paths
+func (c *Client) CompareSecretPaths(sourcePath, targetPath string) (*SecretComparison, error) {
+	// Get the current secrets
+	currentSecrets, err := c.GetSecret(sourcePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current secrets: %w", err)
+	}
+
+	// Get the target secrets
+	targetSecrets, err := c.GetSecret(targetPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get target secrets: %w", err)
+	}
+
+	// Create a comparison object
+	comparison := &SecretComparison{
+		Path:  sourcePath,
+		Diffs: []SecretDiff{},
+	}
+
+	// Track processed keys to avoid duplicates
+	processedKeys := make(map[string]bool)
+
+	// Compare current secrets with target secrets
+	for key, currentValue := range currentSecrets.Data {
+		processedKeys[key] = true
+
+		// Convert value to string for comparison
+		currentValueStr := fmt.Sprintf("%v", currentValue)
+
+		// Check if the key exists in target secrets
+		targetValue, exists := targetSecrets.Data[key]
+		if !exists {
+			// Key only exists in current secrets (added)
+			// Check if the key should be redacted
+			redacted := c.isRedactedKey(key)
+
+			// Try to parse and redact JSON values if needed
+			if redacted && c.redactJSONVals {
+				redactedJSON, isJSON := c.TryParseAndRedactJSON(currentValueStr)
+				if isJSON {
+					currentValueStr = redactedJSON
+				}
+			}
+
+			comparison.Diffs = append(comparison.Diffs, SecretDiff{
+				Key:        key,
+				Current:    currentValueStr,
+				Target:     "",
+				IsRedacted: redacted,
+				Status:     "+", // Added key
+			})
+		} else {
+			// Key exists in both, compare values
+			targetValueStr := fmt.Sprintf("%v", targetValue)
+
+			// Skip if values are identical
+			if currentValueStr == targetValueStr {
+				continue
+			}
+
+			// Check if the key should be redacted
+			redacted := c.isRedactedKey(key)
+
+			// Try to parse and redact JSON values if needed
+			if redacted && c.redactJSONVals {
+				redactedCurrentJSON, isCurrentJSON := c.TryParseAndRedactJSON(currentValueStr)
+				if isCurrentJSON {
+					currentValueStr = redactedCurrentJSON
+				}
+
+				redactedTargetJSON, isTargetJSON := c.TryParseAndRedactJSON(targetValueStr)
+				if isTargetJSON {
+					targetValueStr = redactedTargetJSON
+				}
+			}
+
+			// Generate diff only if not redacted
+			diffText := ""
+			if !redacted {
+				diffText = GenerateDiff(currentValueStr, targetValueStr)
+			}
+
+			comparison.Diffs = append(comparison.Diffs, SecretDiff{
+				Key:        key,
+				Current:    currentValueStr,
+				Target:     targetValueStr,
+				Diff:       diffText,
+				IsRedacted: redacted,
+				Status:     "*", // Modified value
+			})
+		}
+	}
+
+	// Find keys that only exist in target secrets (removed)
+	for key, targetValue := range targetSecrets.Data {
+		if _, exists := processedKeys[key]; !exists {
+			// Key only exists in target secrets (removed)
+			targetValueStr := fmt.Sprintf("%v", targetValue)
+
+			// Check if the key should be redacted
+			redacted := c.isRedactedKey(key)
+
+			// Try to parse and redact JSON values if needed
+			if redacted && c.redactJSONVals {
+				redactedJSON, isJSON := c.TryParseAndRedactJSON(targetValueStr)
+				if isJSON {
+					targetValueStr = redactedJSON
+				}
+			}
+
+			comparison.Diffs = append(comparison.Diffs, SecretDiff{
+				Key:        key,
+				Current:    "",
+				Target:     targetValueStr,
+				IsRedacted: redacted,
+				Status:     "-", // Removed key
+			})
+		}
+	}
+
+	return comparison, nil
+}
+
+// TryParseAndRedactJSON attempts to parse a string as JSON and redact sensitive values
+func (c *Client) TryParseAndRedactJSON(value string) (string, bool) {
+	if !c.redactJSONVals || !IsJSONValue(value) {
+		return value, false
+	}
+
+	var data interface{}
+	err := json.Unmarshal([]byte(value), &data)
+	if err != nil {
+		return value, false
+	}
+
+	redactedData := c.RedactJSONValues(data)
+	if reflect.DeepEqual(data, redactedData) {
+		return value, false
+	}
+
+	redactedJSON, err := json.MarshalIndent(redactedData, "", "  ")
+	if err != nil {
+		return value, false
+	}
+
+	return string(redactedJSON), true
+}
+
+// GenerateDiff creates a text diff between two strings
+func GenerateDiff(current, target string) string {
+	dmp := diffmatchpatch.New()
+	diffs := dmp.DiffMain(current, target, false)
+	return dmp.DiffPrettyText(diffs)
 }

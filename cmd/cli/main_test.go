@@ -23,14 +23,16 @@ func TestConfigFlagHandling(t *testing.T) {
 	// Create a test config file
 	testConfigPath := filepath.Join(tempDir, ".vaultconfigs")
 	testConfig := config.Configs{
-		Environments: map[string]config.VaultConfig{
+		Environments: map[string]config.EnvironmentConfig{
 			"dev": {
-				URL:   "https://vault-dev.example.com",
-				Token: "dev-token",
+				URL:      "https://vault-dev.example.com",
+				TokenEnv: "VAULT_DEV_TOKEN",
+				Store:    "vault",
 			},
 			"prod": {
-				URL:   "https://vault-prod.example.com",
-				Token: "prod-token",
+				URL:      "https://vault-prod.example.com",
+				TokenEnv: "VAULT_PROD_TOKEN",
+				Store:    "vault",
 			},
 		},
 	}

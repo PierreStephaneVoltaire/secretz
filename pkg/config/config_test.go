@@ -14,16 +14,19 @@ func TestReadConfigs(t *testing.T) {
 	defer os.Remove(tmpFile.Name())
 
 	testConfig := Configs{
-		Environments: map[string]VaultConfig{
+		Environments: map[string]EnvironmentConfig{
 			"dev": {
-				URL:   "https://vault-dev.example.com",
-				Token: "dev-token",
+				URL:      "https://vault-dev.example.com",
+				TokenEnv: "VAULT_DEV_TOKEN",
+				Store:    "vault",
 			},
 			"prod": {
-				URL:   "https://vault-prod.example.com",
-				Token: "prod-token",
+				URL:      "https://vault-prod.example.com",
+				TokenEnv: "VAULT_PROD_TOKEN",
+				Store:    "vault",
 			},
 		},
+		RedactedKeys: []string{"password", "token"},
 	}
 
 	jsonData, err := json.Marshal(testConfig)
@@ -88,18 +91,26 @@ func TestReadConfigs(t *testing.T) {
 
 func TestGetEnvironmentConfig(t *testing.T) {
 	configs := &Configs{
-		Environments: map[string]VaultConfig{
+		Environments: map[string]EnvironmentConfig{
 			"dev": {
-				URL:   "https://dev.example.com",
-				Token: "dev-token",
+				URL:      "https://dev.example.com",
+				TokenEnv: "VAULT_DEV_TOKEN",
+				Store:    "vault",
 			},
 			"empty-url": {
-				URL:   "",
-				Token: "some-token",
+				URL:      "",
+				TokenEnv: "VAULT_SOME_TOKEN",
+				Store:    "vault",
 			},
 			"empty-token": {
-				URL:   "https://example.com",
-				Token: "",
+				URL:      "https://example.com",
+				TokenEnv: "",
+				Store:    "vault",
+			},
+			"non-vault": {
+				URL:      "https://example.com",
+				TokenEnv: "VAULT_TOKEN",
+				Store:    "unsupported",
 			},
 		},
 	}
@@ -131,7 +142,13 @@ func TestGetEnvironmentConfig(t *testing.T) {
 			name:          "Empty token",
 			env:           "empty-token",
 			expectError:   true,
-			errorContains: "token not specified",
+			errorContains: "token_env not specified",
+		},
+		{
+			name:          "Unsupported store",
+			env:           "non-vault",
+			expectError:   true,
+			errorContains: "unsupported store",
 		},
 	}
 
@@ -159,8 +176,11 @@ func TestGetEnvironmentConfig(t *testing.T) {
 			if config.URL != expectedConfig.URL {
 				t.Errorf("Expected URL %q, got %q", expectedConfig.URL, config.URL)
 			}
-			if config.Token != expectedConfig.Token {
-				t.Errorf("Expected Token %q, got %q", expectedConfig.Token, config.Token)
+			if config.TokenEnv != expectedConfig.TokenEnv {
+				t.Errorf("Expected TokenEnv %q, got %q", expectedConfig.TokenEnv, config.TokenEnv)
+			}
+			if config.Store != expectedConfig.Store {
+				t.Errorf("Expected Store %q, got %q", expectedConfig.Store, config.Store)
 			}
 		})
 	}

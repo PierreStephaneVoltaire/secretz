@@ -12,30 +12,51 @@ var (
 	sourceInstance     string
 	targetInstance     string
 	kvEngineInstance   string
-	pathSuffixInstance string
+	configPathInstance string
 	envInstance        string
+	targetPathInstance string
+	targetEnvInstance  string
+	targetKVInstance   string
 )
 
 var instanceCompareCmd = &cobra.Command{
-	Use:   "instance-compare [app-name]",
+	Use:   "instance-compare",
 	Short: "Compare secrets between vault instances",
-	Args:  cobra.ExactArgs(1),
+	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		appName := args[0]
+		// Check if required parameters are provided
+		if configPathInstance == "" {
+			return fmt.Errorf("--config-path is required")
+		}
+
+		if envInstance == "" {
+			return fmt.Errorf("--env is required")
+		}
+
+		if kvEngineInstance == "" {
+			return fmt.Errorf("--kv-engine is required")
+		}
 
 		configs, err := readConfigs()
 		if err != nil {
 			return err
 		}
 
+		// Validate that redact_secrets warning is shown if disabled
+		if configs.RedactSecrets != nil && !*configs.RedactSecrets {
+			fmt.Println("WARNING: Secret redaction is disabled. Sensitive values may be displayed in plaintext.")
+		}
+
 		// Perform the comparison
 		result, err := vault.CompareVaultInstances(
 			sourceInstance,
 			targetInstance,
-			appName,
+			configPathInstance,
 			envInstance,
 			kvEngineInstance,
-			pathSuffixInstance,
+			targetPathInstance,
+			targetEnvInstance,
+			targetKVInstance,
 			configs,
 		)
 		if err != nil {
@@ -43,10 +64,10 @@ var instanceCompareCmd = &cobra.Command{
 		}
 
 		// Print the results
-		fmt.Printf("Comparing secrets for %s\n", appName)
+		fmt.Printf("Source Path: %s | Target Path: %s\n", result.SourcePath, result.TargetPath)
 		fmt.Printf("Source Instance: %s | Target Instance: %s\n", sourceInstance, targetInstance)
-		fmt.Printf("Environment: %s | KV Engine: %s | Path Suffix: %s\n",
-			envInstance, kvEngineInstance, pathSuffixInstance)
+		fmt.Printf("Source Env: %s | Target Env: %s\n", result.SourceEnv, result.TargetEnv)
+		fmt.Printf("Source KV Engine: %s | Target KV Engine: %s\n", result.SourceKVEngine, result.TargetKVEngine)
 		fmt.Println("----------------------------------------")
 
 		if len(result.MissingInSource) > 0 {
@@ -128,9 +149,19 @@ func init() {
 	// Initialize the command with flags
 	instanceCompareCmd.Flags().StringVar(&sourceInstance, "source", "dev", "Source vault instance (from config file)")
 	instanceCompareCmd.Flags().StringVar(&targetInstance, "target", "uat", "Target vault instance (from config file)")
-	instanceCompareCmd.Flags().StringVar(&kvEngineInstance, "kv-engine", "kv", "KV engine to use in both vault instances")
-	instanceCompareCmd.Flags().StringVar(&pathSuffixInstance, "config-path", "config", "Path suffix to use (config, configs, secret, secrets)")
-	instanceCompareCmd.Flags().StringVar(&envInstance, "env", "dev", "Environment to compare within both instances (dev/uat/prod)")
+	instanceCompareCmd.Flags().StringVar(&kvEngineInstance, "kv-engine", "", "Source KV engine name (required)")
+	instanceCompareCmd.Flags().StringVar(&configPathInstance, "config-path", "", "Full path to the source secret (required)")
+	instanceCompareCmd.Flags().StringVar(&envInstance, "env", "", "Source environment name in the config (required)")
+
+	// Optional target-specific flags
+	instanceCompareCmd.Flags().StringVar(&targetPathInstance, "target-path", "", "Full path to the target secret (if omitted, uses same as config-path)")
+	instanceCompareCmd.Flags().StringVar(&targetEnvInstance, "target-env", "", "Target environment name (if omitted, uses same as env)")
+	instanceCompareCmd.Flags().StringVar(&targetKVInstance, "target-kv", "", "Target KV engine name (if omitted, uses same as kv-engine)")
+
+	// Make required flags actually required
+	instanceCompareCmd.MarkFlagRequired("config-path")
+	instanceCompareCmd.MarkFlagRequired("env")
+	instanceCompareCmd.MarkFlagRequired("kv-engine")
 
 	// Add the command to the root command
 	rootCmd.AddCommand(instanceCompareCmd)
