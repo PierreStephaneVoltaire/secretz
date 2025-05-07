@@ -91,9 +91,14 @@ func (c *Configs) GetEnvironmentConfig(env string) (*EnvironmentConfig, error) {
 		return nil, fmt.Errorf("token_env not specified for vault environment %s", env)
 	}
 
-	// For now, we only support vault store
-	if config.Store != "" && config.Store != "vault" {
+	// Validate the store type
+	if config.Store != "" && config.Store != "vault" && config.Store != "awssecretsmanager" {
 		return nil, fmt.Errorf("unsupported store type: %s", config.Store)
+	}
+
+	// AWS Secrets Manager requires a role ARN
+	if config.Store == "awssecretsmanager" && config.Role == "" {
+		return nil, fmt.Errorf("'role' is required for AWS Secrets Manager environments")
 	}
 
 	return &config, nil
