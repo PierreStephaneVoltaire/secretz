@@ -1,6 +1,7 @@
 # vault-promoter 
 
-A solution for managing Secrets and Configs across multiple environments with secret promotion capabilities.
+vault-promoter is a tool for debugging config drift and securely promoting secrets/configs across environments without exposing sensitive data. It enables redacted comparison, full or partial promotion, and pluggable secret stores, all while respecting existing access boundaries.
+`This tool does not compare metadata such as TTL, versioning, or audit info. Use native tools for that.`
 
 ## Overview
 
@@ -82,9 +83,10 @@ The CLI provides flexible, unopinionated secret/config comparison and promotion 
 
 #### Available Commands
 
-The CLI provides a flexible command for comparing secrets/configs across environments and Vault instances:
+The CLI provides flexible commands for comparing and copying secrets/configs across environments and Vault instances:
 
 - `compare` - For comparing secrets/configs across environments and Vault instances
+- `copy` - For copying secrets/configs between environments and store types (Vault and AWS Secrets Manager)
 
 #### Global Flags
 
@@ -162,6 +164,114 @@ vault-promoter compare <source-path> <target-path> --config <config-file> --env 
    ```
    
    The CLI will compare:
+
+#### Command: `copy`
+
+Copies secrets/configs between environments and store types (Vault and AWS Secrets Manager).
+
+```bash
+vault-promoter copy <source-env> <secret-path> <target-env> [target-path] --config <config-file> --source-kv <source-kv> [--target-kv <target-kv>] [--overwrite] [--copy-config] [--copy-secrets] [--only-copy-keys]
+```
+
+##### Required Arguments
+
+- `<source-env>` (string, required)
+  - The source environment name as defined in the config file (e.g., `dev`, `uat`, `prod`)
+
+- `<secret-path>` (string, required)
+  - The path to the secret in the source environment
+
+- `<target-env>` (string, required)
+  - The target environment name as defined in the config file (e.g., `dev`, `uat`, `prod`)
+
+- `[target-path]` (string, optional)
+  - The path to the secret in the target environment
+  - If omitted, uses the same path as the source
+
+##### Required Flags
+
+- `--source-kv` (string, required when source is Vault)
+  - The KV engine name to use in Vault for the source path
+  - Example: `--source-kv secret`
+
+##### Optional Flags
+
+- `--target-kv` (string, optional)
+  - The KV engine name to use in Vault for the target path (only applicable when target is Vault)
+  - If omitted and target is Vault, defaults to the source KV engine
+  - Example: `--target-kv secret-uat`
+
+- `--overwrite` (boolean, default: false)
+  - If set, existing keys in the target will be overwritten. Otherwise, existing keys are preserved.
+  - Example: `--overwrite`
+
+- `--copy-config` (boolean, default: false)
+  - Only copy configuration values (non-secret values)
+  - Example: `--copy-config`
+
+- `--copy-secrets` (boolean, default: false)
+  - Only copy secret values (keys that match the redacted_keys list)
+  - Example: `--copy-secrets`
+
+- `--only-copy-keys` (boolean, default: false)
+  - Only copy the keys, not the values. Values will be empty strings.
+  - Example: `--only-copy-keys`
+
+##### Example Invocations
+
+- Copy secrets between the same path in different environments:
+  ```bash
+  vault-promoter copy dev app/config prod --config .vaultconfigs --source-kv secret
+  ```
+
+- Copy secrets between different paths in different environments:
+  ```bash
+  vault-promoter copy dev app/config prod app/new-config --config .vaultconfigs --source-kv secret --target-kv secret
+  ```
+
+- Copy from Vault to AWS Secrets Manager:
+  ```bash
+  vault-promoter copy dev app/config staging app/config --config .vaultconfigs --source-kv secret
+  ```
+
+- Copy only configuration values (non-secret values):
+  ```bash
+  vault-promoter copy dev app/config prod --config .vaultconfigs --source-kv secret --copy-config
+  ```
+
+- Copy only secret values:
+  ```bash
+  vault-promoter copy dev app/config prod --config .vaultconfigs --source-kv secret --copy-secrets
+  ```
+
+- Copy and overwrite existing values:
+  ```bash
+  vault-promoter copy dev app/config prod --config .vaultconfigs --source-kv secret --overwrite
+  ```
+
+- Copy only the structure, not the values:
+  ```bash
+  vault-promoter copy dev app/config prod --config .vaultconfigs --source-kv secret --only-copy-keys
+  ```
+
+##### How Copy Works
+
+1. The CLI uses the `--source-env` parameter to determine the source environment and authenticate with that store.
+
+2. It then uses the `--target-env` parameter to authenticate with the target store.
+
+3. The secret path is used to locate the secret in the source store:
+   - For Vault: `<source-kv>/<secret-path>`
+   - For AWS Secrets Manager: `<secret-path>`
+
+4. If the target is Vault and the KV engine doesn't exist, it will be created automatically.
+
+5. The copy operation follows these rules:
+   - By default, existing keys in the target are not overwritten unless `--overwrite` is specified
+   - If `--copy-config` is specified, only non-secret keys are copied
+   - If `--copy-secrets` is specified, only secret keys (matching redacted_keys) are copied
+   - If `--only-copy-keys` is specified, only the keys are copied, not the values
+   - When copying from AWS Secrets Manager to Vault, non-JSON secrets cannot be copied
    - Source: `secret/app/config1` in the `kv` engine using the `dev` environment
    - Target: `secret/app/config2` in the `kv` engine using the `dev` environment
 
