@@ -6,7 +6,6 @@ vault-promoter is a tool for debugging config drift and securely promoting secre
 ## Overview
 
 This repository contains the configuration and tooling for:
-- Deploying Vault instances across multiple environments (dev, uat, prod)
 - Managing secrets and configurations
 - Promoting secrets between environments
 
@@ -390,6 +389,31 @@ Each environment (e.g., `dev`, `uat`, `prod`, `staging`) can have the following 
 - To disable redaction for development, set `redact_secrets` to `false` (not recommended for production).
 
 ---
+## Questions
+- How does redaction work? Can I override it?
+
+- How does this authenticate to each Vault instance?
+
+- Can I diff Vault and AWS Secrets Manager directly?
+
+- What happens if a value is a JSON blob — does it do deep diffing?
+
+- What prevents someone from overwriting secrets in prod by mistake?
+
+- How should i use this?
+
+- How are configs vs secrets identified? Can I tag or label them?
+
+- Is there a web UI?
+
+- Does this tool store or cache Vault credentials anywhere?
+
+- What stores are supported beyond Vault and AWS SM?
+
+- What happens if a key exists in the target but is not in the source during a copy?
+
+
+
 ## Development
 
 ### Building
