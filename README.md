@@ -217,6 +217,18 @@ vault-promoter copy <source-env> <secret-path> <target-env> [target-path] --conf
   - Only copy the keys, not the values. Values will be empty strings.
   - Example: `--only-copy-keys`
 
+- `--dry-run` (boolean, default: false)
+  - Show what would be copied without making any changes
+  - Example: `--dry-run`
+
+- `--approve` (boolean, default: false)
+  - Automatically approve the copy operation without prompting
+  - Example: `--approve`
+
+- `--log-to` (string, default: `./vault-promoter-copy.log`)
+  - Path to the log file for copy operations
+  - Example: `--log-to /path/to/logfile.json`
+
 ##### Example Invocations
 
 - Copy secrets between the same path in different environments:
@@ -296,9 +308,9 @@ vault-promoter copy <source-env> <secret-path> <target-env> [target-path] --conf
   - Keys only in target
   - Keys present in both but with different values (redacted if sensitive)
 - Redaction is controlled by `.vaultconfigs` settings:
-  - `redact_secrets`: Redacts all secret values by default
+  - `hide_secrets`: Redacts all secret values by default
   - `redact_json_values`: Redacts sensitive keys within JSON values
-  - `redacted_keys`: List of key names to redact
+  - `sensitive_keys`: List of key names to redact
 
 ##### Example `.vaultconfigs.example` snippet
 
@@ -325,9 +337,9 @@ vault-promoter copy <source-env> <secret-path> <target-env> [target-path] --conf
       "role": "arn:aws:iam::123456789012:role/role-name"
     }
   },
-  "redact_secrets": true,
+  "hide_secrets": true,
   "redact_json_values": false,
-  "redacted_keys": [
+  "sensitive_keys": [
     "password",
     "secret",
     "token",
@@ -356,9 +368,9 @@ The `.vaultconfigs.example` file defines how the CLI connects to secret stores a
 | Parameter                | Type      | Description |
 |--------------------------|-----------|-------------|
 | `environments`           | object    | A mapping of environment names (e.g., `dev`, `uat`, `prod`, `staging`) to their configuration blocks. Each environment specifies how to connect to its secret store. |
-| `redact_secrets`         | boolean   | If `true`, all secret values are redacted in CLI output (e.g., replaced with `(redacted)`). If `false`, values are shown in plain text (not recommended for production). |
-| `redact_json_values`     | boolean   | If `true`, keys matching `redacted_keys` inside JSON values will also be redacted. Useful if secrets are stored as JSON blobs. |
-| `redacted_keys`          | array     | A list of key names (case-insensitive) considered sensitive. Any key matching an entry here will be redacted in CLI output. |
+| `hide_secrets`         | boolean   | If `true`, all secret values are redacted in CLI output (e.g., replaced with `(redacted)`). If `false`, values are shown in plain text (not recommended for production). |
+| `redact_json_values`     | boolean   | If `true`, keys matching `sensitive_keys` inside JSON values will also be redacted. Useful if secrets are stored as JSON blobs. |
+| `sensitive_keys`          | array     | A list of key names (case-insensitive) considered sensitive. Any key matching an entry here will be redacted in CLI output. |
 
 #### `environments` block
 Each environment (e.g., `dev`, `uat`, `prod`, `staging`) can have the following fields:
@@ -368,9 +380,9 @@ Each environment (e.g., `dev`, `uat`, `prod`, `staging`) can have the following 
 - `role`: (string, AWS only) The ARN of the IAM role to assume when connecting to AWS Secrets Manager (optional, only for AWS environments).
 
 #### Redaction settings
-- `redact_secrets`: Enables or disables redaction of all secret values.
+- `hide_secrets`: Enables or disables redaction of all secret values.
 - `redact_json_values`: Enables redaction of sensitive keys inside JSON values.
-- `redacted_keys`: List of sensitive key names to redact (e.g., `password`, `token`, `key`). This applies to both top-level keys and (if enabled) keys inside JSON blobs.
+- `sensitive_keys`: List of sensitive key names to redact (e.g., `password`, `token`, `key`). This applies to both top-level keys and (if enabled) keys inside JSON blobs.
 
 **Example usage:**
 - To add a new environment, add a new entry under `environments` with its connection details.

@@ -341,7 +341,7 @@ All copy operations are logged to the specified log file (--log-to) in JSON form
 
 				// Perform cross-store copy
 				result, err := comparison.CopyVaultWithAWS(
-					sourceEnv, targetEnv, secretPath, targetPath,
+					sourceEnv, targetEnv, sourcePath, targetPath,
 					sourceEnv, targetEnv, sourceKV, targetKV,
 					configs,
 					options,
@@ -351,6 +351,9 @@ All copy operations are logged to the specified log file (--log-to) in JSON form
 					fmt.Printf("Error copying secret: %v\n", err)
 					os.Exit(1)
 				}
+
+				// Log the copy operation
+				logCopyOperation(sourceEnv, targetEnv, sourcePath, targetPath, result, logToFile)
 
 				if result.Success {
 					fmt.Println(result.Message)

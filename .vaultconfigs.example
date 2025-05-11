@@ -20,9 +20,9 @@
       "role": "arn:aws:iam::123456789012:role/role-name"
     }
   },
-  "redact_secrets": true,
+  "hide_secrets": true,
   "redact_json_values": false,
-  "redacted_keys": [
+  "sensitive_keys": [
     "password",
     "secret",
     "token",
