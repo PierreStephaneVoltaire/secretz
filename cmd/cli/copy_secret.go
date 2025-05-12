@@ -131,6 +131,7 @@ func init() {
 		copyConfig      bool
 		copySecrets     bool
 		onlyCopyKeys    bool
+		prune           bool
 		dryRun          bool
 		autoApprove     bool
 		logToFile       string
@@ -298,6 +299,7 @@ All copy operations are logged to the specified log file (--log-to) in JSON form
 						CopyConfig:      options.CopyConfig,
 						CopySecrets:     options.CopySecrets,
 						OnlyCopyKeys:    options.OnlyCopyKeys,
+						Prune:           prune,
 					}
 
 					// Copy the secret
@@ -372,6 +374,7 @@ All copy operations are logged to the specified log file (--log-to) in JSON form
 	copyCmd.Flags().BoolVar(&copyConfig, "copy-config", false, "Only copy configuration values (non-secret values)")
 	copyCmd.Flags().BoolVar(&copySecrets, "copy-secrets", false, "Only copy secret values (keys that match the sensitive_keys list)")
 	copyCmd.Flags().BoolVar(&onlyCopyKeys, "only-copy-keys", false, "Only copy the keys, not the values. Values will be empty strings.")
+	copyCmd.Flags().BoolVar(&prune, "prune", false, "Remove keys from target that don't exist in source (dangerous, use with caution)")
 	copyCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be copied without making any changes")
 	copyCmd.Flags().BoolVar(&autoApprove, "approve", false, "Automatically approve the copy operation without prompting")
 	copyCmd.Flags().StringVar(&logToFile, "log-to", "./vault-promoter-copy.log", "Path to the log file for copy operations")
