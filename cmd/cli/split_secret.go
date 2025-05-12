@@ -14,7 +14,7 @@ import (
 	"github.com/secretz/vault-promoter/pkg/vault"
 )
 
-// SplitLogEntry represents a log entry for a split operation
+// SplitLogEntry tracks split operations for auditing purposes
 type SplitLogEntry struct {
 	Timestamp   string   `json:"timestamp"`
 	SourceEnv   string   `json:"source_env"`
@@ -26,7 +26,7 @@ type SplitLogEntry struct {
 	SplitKeys   []string `json:"split_keys"` // List of keys that were split
 }
 
-// getKeysFromMap extracts keys from a map and returns them as a slice of strings
+// getKeysFromMap helps with displaying available keys for troubleshooting
 func getKeysFromMap(m map[string]interface{}) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
@@ -35,9 +35,8 @@ func getKeysFromMap(m map[string]interface{}) []string {
 	return keys
 }
 
-// logSplitOperation logs the split operation to a file in JSON format
+// logSplitOperation maintains audit trail for compliance and troubleshooting
 func logSplitOperation(sourceEnv, sourcePath, targetPath string, sourceStore string, success bool, message string, splitKeys []string, logFile string) {
-	// Create log entry
 	entry := SplitLogEntry{
 		Timestamp:   time.Now().Format(time.RFC3339),
 		SourceEnv:   sourceEnv,
@@ -49,14 +48,13 @@ func logSplitOperation(sourceEnv, sourcePath, targetPath string, sourceStore str
 		SplitKeys:   splitKeys,
 	}
 
-	// Marshal to JSON
 	jsonData, err := json.MarshalIndent(entry, "", "  ")
 	if err != nil {
 		fmt.Printf("Error creating log entry: %v\n", err)
 		return
 	}
 
-	// Open log file in append mode or create if it doesn't exist
+	// Use append mode to maintain history and create if needed
 	file, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Printf("Error opening log file: %v\n", err)
@@ -64,13 +62,11 @@ func logSplitOperation(sourceEnv, sourcePath, targetPath string, sourceStore str
 	}
 	defer file.Close()
 
-	// Write log entry
 	if _, err := file.Write(jsonData); err != nil {
 		fmt.Printf("Error writing to log file: %v\n", err)
 		return
 	}
 
-	// Add newline
 	if _, err := file.WriteString("\n"); err != nil {
 		fmt.Printf("Error writing to log file: %v\n", err)
 		return
@@ -357,9 +353,7 @@ All split operations are logged to the specified log file (--log-to) in JSON for
 				awsSourceClient := sourceClient.(*awssecretsmanager.Client)
 				awsTargetClient := targetClient.(*awssecretsmanager.Client)
 
-				// For AWS Secrets Manager, we need to:
-				// 1. Create a new secret at targetPath with sensitive data
-				// 2. Update the source secret with only non-sensitive data
+				// AWS requires two separate operations for the split
 				_, _, err = awsTargetClient.GetSecret(targetPath)
 				if err == nil {
 					fmt.Printf("Error: Target path %s already exists. Split operation requires a new target path.\n", targetPath)
