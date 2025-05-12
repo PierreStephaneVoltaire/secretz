@@ -114,36 +114,60 @@ jobs:
       - name: Prepare executables for publishing
         run: |
           mkdir -p dist
-          # Extract all archives to get the executables
-          for archive in executables/vault-promoter-*/vault-promoter-*.zip; do
-            if [ -f "$archive" ]; then
-              unzip -o "$archive" -d dist/
+          rm -rf dist/*  # Ensure the directory is empty
+          
+          # Process each platform's archive and extract with unique names
+          for platform_dir in executables/vault-promoter-*; do
+            platform=$(basename "$platform_dir")
+            
+            # Handle zip files (Windows)
+            if [ -f "$platform_dir/vault-promoter-$platform.zip" ]; then
+              # Create a temporary directory for extraction
+              mkdir -p temp_extract
+              unzip -o "$platform_dir/vault-promoter-$platform.zip" -d temp_extract/
+              
+              # Copy and rename the executable with platform suffix
+              if [ -f temp_extract/vault-promoter.exe ]; then
+                cp temp_extract/vault-promoter.exe "dist/vault-promoter-$platform.exe"
+              fi
+              
+              # Copy config example with platform suffix
+              if [ -f temp_extract/.vaultconfigs.example ]; then
+                cp temp_extract/.vaultconfigs.example "dist/vaultconfigs-example-$platform.txt"
+              fi
+              
+              # Also keep the original archive
+              cp "$platform_dir/vault-promoter-$platform.zip" dist/
+              
+              # Clean up
+              rm -rf temp_extract
+            fi
+            
+            # Handle tar.gz files (Linux/macOS)
+            if [ -f "$platform_dir/vault-promoter-$platform.tar.gz" ]; then
+              # Create a temporary directory for extraction
+              mkdir -p temp_extract
+              tar -xzf "$platform_dir/vault-promoter-$platform.tar.gz" -C temp_extract/
+              
+              # Copy and rename the executable with platform suffix
+              if [ -f temp_extract/vault-promoter ]; then
+                cp temp_extract/vault-promoter "dist/vault-promoter-$platform"
+              fi
+              
+              # Copy config example with platform suffix
+              if [ -f temp_extract/.vaultconfigs.example ]; then
+                cp temp_extract/.vaultconfigs.example "dist/vaultconfigs-example-$platform.txt"
+              fi
+              
+              # Also keep the original archive
+              cp "$platform_dir/vault-promoter-$platform.tar.gz" dist/
+              
+              # Clean up
+              rm -rf temp_extract
             fi
           done
           
-          for archive in executables/vault-promoter-*/vault-promoter-*.tar.gz; do
-            if [ -f "$archive" ]; then
-              tar -xzf "$archive" -C dist/
-            fi
-          done
-          
-          # Rename executables with platform suffix for clarity
-          if [ -f dist/vault-promoter.exe ]; then
-            for platform in windows-amd64 windows-arm64; do
-              if [ -f executables/vault-promoter-$platform/vault-promoter-$platform.zip ]; then
-                cp dist/vault-promoter.exe dist/vault-promoter-$platform.exe
-              fi
-            done
-          fi
-          
-          if [ -f dist/vault-promoter ]; then
-            for platform in linux-amd64 linux-arm64 darwin-amd64 darwin-arm64; do
-              if [ -f executables/vault-promoter-$platform/vault-promoter-$platform.tar.gz ]; then
-                cp dist/vault-promoter dist/vault-promoter-$platform
-              fi
-            done
-          fi
-          
+          echo "Contents of dist directory:"
           ls -la dist/
       
       - name: Upload executables to GitHub Artifacts
