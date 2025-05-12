@@ -3,12 +3,13 @@ module github.com/secretz/vault-promoter
 go 1.21
 
 require (
+	github.com/aws/aws-sdk-go v1.55.7
 	github.com/hashicorp/vault/api v1.10.0
+	github.com/sergi/go-diff v1.3.1
 	github.com/spf13/cobra v1.8.0
 )
 
 require (
-	github.com/aws/aws-sdk-go v1.55.7 // indirect
 	github.com/cenkalti/backoff/v3 v3.0.0 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -25,7 +26,6 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
-	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
 	golang.org/x/crypto v0.6.0 // indirect
