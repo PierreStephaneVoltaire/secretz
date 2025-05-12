@@ -16,7 +16,7 @@ import (
 	"github.com/secretz/vault-promoter/pkg/vault"
 )
 
-// CopyLogEntry represents a log entry for a copy operation
+// CopyLogEntry tracks copy operations for auditing purposes
 type CopyLogEntry struct {
 	Timestamp   string                 `json:"timestamp"`
 	SourceEnv   string                 `json:"source_env"`
@@ -30,9 +30,8 @@ type CopyLogEntry struct {
 	Keys        map[string]interface{} `json:"keys"`
 }
 
-// logCopyOperation logs the copy operation to a file in JSON format
+// logCopyOperation maintains audit trail for compliance and troubleshooting
 func logCopyOperation(sourceEnv, targetEnv, sourcePath, targetPath string, result *comparison.CopyResult, logFile string) {
-	// Create log entry
 	entry := CopyLogEntry{
 		Timestamp:   time.Now().Format(time.RFC3339),
 		SourceEnv:   sourceEnv,
@@ -46,10 +45,9 @@ func logCopyOperation(sourceEnv, targetEnv, sourcePath, targetPath string, resul
 		Keys:        make(map[string]interface{}),
 	}
 
-	// Add keys that were copied (with redacted values for sensitive keys)
+	// Redact sensitive values for security
 	if result.Keys != nil {
 		for k, v := range result.Keys {
-			// Always redact sensitive values regardless of config
 			if isSensitiveKey(k) {
 				entry.Keys[k] = "(redacted)"
 			} else {
@@ -58,14 +56,13 @@ func logCopyOperation(sourceEnv, targetEnv, sourcePath, targetPath string, resul
 		}
 	}
 
-	// Marshal to JSON
 	jsonData, err := json.MarshalIndent(entry, "", "  ")
 	if err != nil {
 		fmt.Printf("Error creating log entry: %v\n", err)
 		return
 	}
 
-	// Open log file in append mode or create if it doesn't exist
+	// Use append mode to maintain history and create if needed
 	file, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Printf("Error opening log file: %v\n", err)
@@ -73,13 +70,11 @@ func logCopyOperation(sourceEnv, targetEnv, sourcePath, targetPath string, resul
 	}
 	defer file.Close()
 
-	// Write log entry
 	if _, err := file.Write(jsonData); err != nil {
 		fmt.Printf("Error writing to log file: %v\n", err)
 		return
 	}
 
-	// Add newline
 	if _, err := file.WriteString("\n"); err != nil {
 		fmt.Printf("Error writing to log file: %v\n", err)
 		return
@@ -88,7 +83,7 @@ func logCopyOperation(sourceEnv, targetEnv, sourcePath, targetPath string, resul
 	fmt.Printf("Copy operation logged to %s\n", logFile)
 }
 
-// isSensitiveKey checks if a key is sensitive based on common patterns
+// isSensitiveKey identifies keys that should have their values redacted in logs
 func isSensitiveKey(key string) bool {
 	sensitivePatterns := []string{
 		"password", "secret", "token", "key", "credential", "auth", "pwd", "pass",
@@ -105,7 +100,6 @@ func isSensitiveKey(key string) bool {
 	return false
 }
 
-// promptForConfirmation asks the user for confirmation before proceeding
 func promptForConfirmation(message string) bool {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Printf("%s [y/N]: ", message)
@@ -122,19 +116,19 @@ func promptForConfirmation(message string) bool {
 
 func init() {
 	var (
-		sourceEnv       string
-		sourceKV        string
-		targetEnv       string
-		targetKV        string
-		targetPath      string
-		overwrite       bool
-		copyConfig      bool
-		copySecrets     bool
-		onlyCopyKeys    bool
-		prune           bool
-		dryRun          bool
-		autoApprove     bool
-		logToFile       string
+		sourceEnv    string
+		sourceKV     string
+		targetEnv    string
+		targetKV     string
+		targetPath   string
+		overwrite    bool
+		copyConfig   bool
+		copySecrets  bool
+		onlyCopyKeys bool
+		prune        bool
+		dryRun       bool
+		autoApprove  bool
+		logToFile    string
 	)
 
 	// copyCmd represents the copy command
@@ -176,14 +170,13 @@ All copy operations are logged to the specified log file (--log-to) in JSON form
 				fmt.Println("DRY RUN MODE: No changes will be made")
 				fmt.Printf("Would copy from %s:%s to %s:%s\n", sourceEnv, sourcePath, targetEnv, targetPath)
 				fmt.Printf("Source KV: %s, Target KV: %s\n", sourceKV, targetKV)
-				fmt.Printf("Options: overwrite=%v, copy-config=%v, copy-secrets=%v, only-copy-keys=%v\n", 
+				fmt.Printf("Options: overwrite=%v, copy-config=%v, copy-secrets=%v, only-copy-keys=%v\n",
 					overwrite, copyConfig, copySecrets, onlyCopyKeys)
 				os.Exit(0)
 			}
 
-			// Prompt for confirmation unless auto-approve is set
 			if !autoApprove {
-				message := fmt.Sprintf("Are you sure you want to copy from %s:%s to %s:%s?", 
+				message := fmt.Sprintf("Are you sure you want to copy from %s:%s to %s:%s?",
 					sourceEnv, sourcePath, targetEnv, targetPath)
 				if !promptForConfirmation(message) {
 					fmt.Println("Operation cancelled by user")
@@ -213,10 +206,10 @@ All copy operations are logged to the specified log file (--log-to) in JSON form
 
 			// Create copy options
 			options := comparison.CopyOptions{
-				Overwrite:       overwrite,
-				CopyConfig:      copyConfig,
-				CopySecrets:     copySecrets,
-				OnlyCopyKeys:    onlyCopyKeys,
+				Overwrite:    overwrite,
+				CopyConfig:   copyConfig,
+				CopySecrets:  copySecrets,
+				OnlyCopyKeys: onlyCopyKeys,
 			}
 
 			// Determine the copy operation based on store types
@@ -229,7 +222,7 @@ All copy operations are logged to the specified log file (--log-to) in JSON form
 						fmt.Println("Error: Source KV engine must be specified when using Vault")
 						os.Exit(1)
 					}
-					
+
 					// Default target KV to source KV if not specified
 					if targetKV == "" {
 						targetKV = sourceKV
@@ -251,10 +244,10 @@ All copy operations are logged to the specified log file (--log-to) in JSON form
 
 					// Convert options
 					vaultOptions := vault.CopyOptions{
-						Overwrite:       options.Overwrite,
-						CopyConfig:      options.CopyConfig,
-						CopySecrets:     options.CopySecrets,
-						OnlyCopyKeys:    options.OnlyCopyKeys,
+						Overwrite:    options.Overwrite,
+						CopyConfig:   options.CopyConfig,
+						CopySecrets:  options.CopySecrets,
+						OnlyCopyKeys: options.OnlyCopyKeys,
 					}
 
 					// Copy the secret
@@ -286,7 +279,7 @@ All copy operations are logged to the specified log file (--log-to) in JSON form
 						fmt.Printf("Error creating source AWS client: %v\n", err)
 						os.Exit(1)
 					}
-					
+
 					awsClient, err := awssecretsmanager.NewClient(targetConfig, configs)
 					if err != nil {
 						fmt.Printf("Error creating target AWS client: %v\n", err)
@@ -295,11 +288,11 @@ All copy operations are logged to the specified log file (--log-to) in JSON form
 
 					// Convert options
 					awsOptions := awssecretsmanager.CopyOptions{
-						Overwrite:       options.Overwrite,
-						CopyConfig:      options.CopyConfig,
-						CopySecrets:     options.CopySecrets,
-						OnlyCopyKeys:    options.OnlyCopyKeys,
-						Prune:           prune,
+						Overwrite:    options.Overwrite,
+						CopyConfig:   options.CopyConfig,
+						CopySecrets:  options.CopySecrets,
+						OnlyCopyKeys: options.OnlyCopyKeys,
+						Prune:        prune,
 					}
 
 					// Copy the secret
@@ -335,7 +328,7 @@ All copy operations are logged to the specified log file (--log-to) in JSON form
 					fmt.Println("Error: Source KV engine must be specified when using Vault")
 					os.Exit(1)
 				}
-				
+
 				// Default target KV if not specified and target is Vault
 				if targetKV == "" && targetConfig.Store == "vault" {
 					targetKV = "secret"

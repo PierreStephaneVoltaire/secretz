@@ -26,7 +26,6 @@ type SplitLogEntry struct {
 	SplitKeys   []string `json:"split_keys"` // List of keys that were split
 }
 
-// getKeysFromMap helps with displaying available keys for troubleshooting
 func getKeysFromMap(m map[string]interface{}) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
@@ -35,7 +34,6 @@ func getKeysFromMap(m map[string]interface{}) []string {
 	return keys
 }
 
-// logSplitOperation maintains audit trail for compliance and troubleshooting
 func logSplitOperation(sourceEnv, sourcePath, targetPath string, sourceStore string, success bool, message string, splitKeys []string, logFile string) {
 	entry := SplitLogEntry{
 		Timestamp:   time.Now().Format(time.RFC3339),

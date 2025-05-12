@@ -14,7 +14,7 @@ import (
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
-// Client represents an AWS Secrets Manager client
+// Client handles interactions with AWS Secrets Manager
 type Client struct {
 	svc            *secretsmanager.SecretsManager
 	redactedKeys   []string
@@ -22,7 +22,7 @@ type Client struct {
 	redactJSONVals bool
 }
 
-// SecretDiff represents a difference between two secrets
+// SecretDiff tracks changes between secret versions for auditing
 type SecretDiff struct {
 	Key        string
 	Current    string
@@ -32,13 +32,13 @@ type SecretDiff struct {
 	Status     string // +, -, or * for added, removed, or modified
 }
 
-// SecretComparison represents a comparison between two secrets
+// SecretComparison provides a structured view of differences for review
 type SecretComparison struct {
 	Path  string
 	Diffs []SecretDiff
 }
 
-// NewClient creates a new AWS Secrets Manager client
+// NewClient initializes connection with proper IAM role and settings
 func NewClient(envConfig *config.EnvironmentConfig, configs *config.Configs) (*Client, error) {
 	// Validate config
 	if envConfig.Role == "" {
@@ -67,7 +67,7 @@ func NewClient(envConfig *config.EnvironmentConfig, configs *config.Configs) (*C
 	}, nil
 }
 
-// GetSecret retrieves a secret from AWS Secrets Manager
+// GetSecret fetches and parses secret data with format detection
 func (c *Client) GetSecret(path string) (map[string]interface{}, bool, error) {
 	// Get the secret value
 	result, err := c.svc.GetSecretValue(&secretsmanager.GetSecretValueInput{
@@ -103,7 +103,7 @@ func (c *Client) GetSecret(path string) (map[string]interface{}, bool, error) {
 	return secretData, true, nil
 }
 
-// CompareSecretPaths compares secrets between two paths
+// CompareSecretPaths identifies differences for review before copying
 func (c *Client) CompareSecretPaths(sourcePath, targetPath string) (*SecretComparison, error) {
 	// Get the source secrets
 	sourceSecrets, sourceIsJSON, err := c.GetSecret(sourcePath)
@@ -263,7 +263,7 @@ func (c *Client) CompareSecretPaths(sourcePath, targetPath string) (*SecretCompa
 	return comparison, nil
 }
 
-// isRedactedKey checks if a key should be redacted based on the configured list of sensitive keys
+// isRedactedKey determines which values need protection in logs and output
 func (c *Client) isRedactedKey(key string) bool {
 	// By default, all values in AWS Secrets Manager are considered secrets
 	if c.redactSecrets {
@@ -281,13 +281,13 @@ func (c *Client) isRedactedKey(key string) bool {
 	return false
 }
 
-// IsJSONValue checks if a string is a valid JSON object or array
+// IsJSONValue helps identify nested structures that need special handling
 func IsJSONValue(s string) bool {
 	var js interface{}
 	return json.Unmarshal([]byte(s), &js) == nil
 }
 
-// RedactJSONValues recursively goes through a JSON object and redacts values with sensitive keys
+// RedactJSONValues ensures sensitive data in nested structures is protected
 func (c *Client) RedactJSONValues(data interface{}) interface{} {
 	// Redact based on type
 	switch v := data.(type) {
@@ -319,7 +319,7 @@ func (c *Client) RedactJSONValues(data interface{}) interface{} {
 	}
 }
 
-// TryParseAndRedactJSON attempts to parse a string as JSON and redact sensitive values
+// TryParseAndRedactJSON handles potential JSON strings that might contain sensitive data
 func (c *Client) TryParseAndRedactJSON(value string) (string, bool) {
 	if !IsJSONValue(value) {
 		return value, false
@@ -344,7 +344,7 @@ func (c *Client) TryParseAndRedactJSON(value string) (string, bool) {
 	return string(redactedJSON), true
 }
 
-// GenerateDiff creates a text diff between two strings
+// GenerateDiff provides visual representation of changes for review
 func GenerateDiff(current, target string) string {
 	dmp := diffmatchpatch.New()
 	diffs := dmp.DiffMain(current, target, false)

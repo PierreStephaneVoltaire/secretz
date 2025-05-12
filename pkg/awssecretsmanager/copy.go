@@ -19,7 +19,7 @@ type CopyOptions struct {
 	Prune        bool // If true, keys not in source will be removed from target
 }
 
-// CopySecret copies a secret from one path to another within AWS Secrets Manager
+// CopySecret handles secret transfer between paths
 func (c *Client) CopySecret(sourcePath, targetPath string, options CopyOptions, configs *config.Configs) error {
 	sourceData, isJSON, err := c.GetSecret(sourcePath)
 	if err != nil {
@@ -151,7 +151,7 @@ func (c *Client) CopySecret(sourcePath, targetPath string, options CopyOptions, 
 	return nil
 }
 
-// CopySecretData copies secret data directly without using files
+// CopySecretData operates directly on in-memory data for better security
 func (c *Client) CopySecretData(data map[string]interface{}, targetPath string, options CopyOptions, configs *config.Configs) error {
 	targetExists := true
 	targetData, targetIsJSON, err := c.GetSecret(targetPath)
@@ -248,26 +248,23 @@ func (c *Client) CopySecretData(data map[string]interface{}, targetPath string, 
 	return nil
 }
 
-// extractJSONStructure creates a copy of the JSON structure with empty values
+// extractJSONStructure preserves structure while removing sensitive values
 func extractJSONStructure(data interface{}) interface{} {
 	switch v := data.(type) {
 	case map[string]interface{}:
-		// Process each key in the map
 		result := make(map[string]interface{})
 		for key, value := range v {
 			switch value.(type) {
 			case map[string]interface{}, []interface{}:
-				// Recursively process nested structures
+				// Preserve nested structure recursively
 				result[key] = extractJSONStructure(value)
 			default:
-				// Replace primitive values with empty string
 				result[key] = ""
 			}
 		}
 		return result
 
 	case []interface{}:
-		// Process each item in the array
 		result := make([]interface{}, len(v))
 		for i, item := range v {
 			result[i] = extractJSONStructure(item)
@@ -275,7 +272,6 @@ func extractJSONStructure(data interface{}) interface{} {
 		return result
 
 	default:
-		// Return empty string for primitive values
 		return ""
 	}
 }
