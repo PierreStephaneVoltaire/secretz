@@ -33,7 +33,7 @@ func (c *Client) CopySecret(sourcePath, targetPath string, options CopyOptions, 
 			targetExists = false
 			targetData = make(map[string]interface{})
 			// Match the format of the source for consistency
-			targetIsJSON = isJSON 
+			targetIsJSON = isJSON
 		} else {
 			return fmt.Errorf("failed to get target secret: %w", err)
 		}

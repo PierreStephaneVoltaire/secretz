@@ -203,7 +203,7 @@ func CompareVaultWithAWS(
 		// Add all target values with redaction
 		for key, targetValue := range targetDataMap {
 			targetValueStr := fmt.Sprintf("%v", targetValue)
-			
+
 			// Apply redaction logic
 			redacted := shouldRedact(key, configs)
 
@@ -243,7 +243,7 @@ func CompareVaultWithAWS(
 		// Add all source values with redaction
 		for key, sourceValue := range sourceDataMap {
 			sourceValueStr := fmt.Sprintf("%v", sourceValue)
-			
+
 			// Apply redaction logic
 			redacted := shouldRedact(key, configs)
 
@@ -276,7 +276,7 @@ func CompareVaultWithAWS(
 		targetValue, exists := targetDataMap[key]
 		if !exists {
 			sourceValueStr := fmt.Sprintf("%v", sourceValue)
-			
+
 			// Apply redaction logic
 			redacted := shouldRedact(key, configs)
 
@@ -338,7 +338,7 @@ func CompareVaultWithAWS(
 	for key, targetValue := range targetDataMap {
 		if _, exists := processedKeys[key]; !exists {
 			targetValueStr := fmt.Sprintf("%v", targetValue)
-			
+
 			// Apply redaction logic
 			redacted := shouldRedact(key, configs)
 

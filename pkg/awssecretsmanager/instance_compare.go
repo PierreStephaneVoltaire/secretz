@@ -9,13 +9,13 @@ import (
 
 // InstanceComparisonResult holds the result of comparing secrets between two AWS Secrets Manager instances
 type InstanceComparisonResult struct {
-	SourcePath     string
-	TargetPath     string
-	SourceEnv      string
-	TargetEnv      string
-	Comparisons    []*SecretComparison
-	SourceInstance string
-	TargetInstance string
+	SourcePath      string
+	TargetPath      string
+	SourceEnv       string
+	TargetEnv       string
+	Comparisons     []*SecretComparison
+	SourceInstance  string
+	TargetInstance  string
 	MissingInSource []string
 	MissingInTarget []string
 }

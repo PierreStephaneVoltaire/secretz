@@ -50,9 +50,9 @@ var crossStoreCompareCmd = &cobra.Command{
 			return fmt.Errorf("failed to get target config: %w", err)
 		}
 
-		isValidCrossStoreComparison := 
-		(sourceConfig.Store == "vault" && targetConfig.Store == "awssecretsmanager") ||
-		(sourceConfig.Store == "awssecretsmanager" && targetConfig.Store == "vault")
+		isValidCrossStoreComparison :=
+			(sourceConfig.Store == "vault" && targetConfig.Store == "awssecretsmanager") ||
+				(sourceConfig.Store == "awssecretsmanager" && targetConfig.Store == "vault")
 
 		if !isValidCrossStoreComparison {
 			return fmt.Errorf("cross-store-compare requires one source to be vault and one to be awssecretsmanager")
