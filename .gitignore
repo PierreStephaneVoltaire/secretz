@@ -7,7 +7,6 @@
 *.test
 *.out
 /vendor/
-/go.sum
 /go.work
 /.vaultconfigs
 # IDE - VSCode
