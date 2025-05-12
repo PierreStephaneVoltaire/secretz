@@ -16,42 +16,39 @@ type CopyOptions struct {
 	CopyConfig   bool
 	CopySecrets  bool
 	OnlyCopyKeys bool
+	Prune        bool // If true, keys not in source will be removed from target
 }
 
 // CopySecret copies a secret from one path to another within AWS Secrets Manager
 func (c *Client) CopySecret(sourcePath, targetPath string, options CopyOptions, configs *config.Configs) error {
-	// Get the source secret
 	sourceData, isJSON, err := c.GetSecret(sourcePath)
 	if err != nil {
 		return fmt.Errorf("failed to get source secret: %w", err)
 	}
 
-	// Check if the target secret exists
 	targetExists := true
 	targetData, targetIsJSON, err := c.GetSecret(targetPath)
 	if err != nil {
 		if strings.Contains(err.Error(), "secret not found") {
 			targetExists = false
-			// Initialize an empty target data map
 			targetData = make(map[string]interface{})
-			targetIsJSON = isJSON // Match the format of the source
+			// Match the format of the source for consistency
+			targetIsJSON = isJSON 
 		} else {
 			return fmt.Errorf("failed to get target secret: %w", err)
 		}
 	}
 
-	// If source is not JSON, we can only copy to another AWS Secrets Manager
+	// Special handling for non-JSON secrets
 	if !isJSON {
-		// For non-JSON secrets, just copy the value directly
 		value := sourceData["value"]
 		valueStr := fmt.Sprintf("%v", value)
 
-		// Apply redaction if needed
+		// Redact if security settings require it
 		if c.redactSecrets && !options.CopySecrets {
-			valueStr = "" // Redact the entire value
+			valueStr = ""
 		}
 
-		// Create or update the target secret
 		if targetExists {
 			_, err = c.svc.UpdateSecret(&secretsmanager.UpdateSecretInput{
 				SecretId:     aws.String(targetPath),
@@ -71,27 +68,122 @@ func (c *Client) CopySecret(sourcePath, targetPath string, options CopyOptions, 
 		return nil
 	}
 
-	// For JSON secrets, copy each key-value pair
 	resultData := make(map[string]interface{})
 
-	// If target exists, start with the target data
-	if targetExists && targetIsJSON {
+	// Start with existing target data unless pruning is enabled
+	if targetExists && targetIsJSON && !options.Prune {
 		for k, v := range targetData {
 			resultData[k] = v
 		}
 	}
 
-	// Copy values from source to target
+	// Process each source key according to options
 	for key, value := range sourceData {
-		// Skip if the key already exists in target and we're not overwriting
+		// Skip existing keys if not overwriting
 		if _, exists := resultData[key]; exists && !options.Overwrite {
 			continue
 		}
 
-		// Check if this is a config or secret key
 		isRedactedKey := c.isRedactedKey(key)
 
-		// Skip based on options
+		// Filter keys based on copy options
+		if isRedactedKey && !options.CopySecrets && !options.CopyConfig {
+			continue
+		}
+
+		if !isRedactedKey && options.CopySecrets && !options.CopyConfig {
+			continue
+		}
+
+		// Convert to string for processing
+		valueStr := fmt.Sprintf("%v", value)
+
+		// Handle JSON values if needed
+		if c.redactJSONVals && IsJSONValue(valueStr) {
+			var jsonData interface{}
+			if err := json.Unmarshal([]byte(valueStr), &jsonData); err == nil {
+				if options.OnlyCopyKeys {
+					// Only copy the keys, not the values
+					jsonData = extractJSONStructure(jsonData)
+				} else if isRedactedKey && !options.CopySecrets {
+					// Redact the values
+					jsonData = c.RedactJSONValues(jsonData)
+				}
+
+				// Convert back to string
+				jsonBytes, err := json.Marshal(jsonData)
+				if err == nil {
+					valueStr = string(jsonBytes)
+				}
+			}
+		} else if options.OnlyCopyKeys || (isRedactedKey && !options.CopySecrets && c.redactSecrets) {
+			// For non-JSON values, redact if needed
+			valueStr = ""
+		}
+
+		// Add to result data
+		resultData[key] = valueStr
+	}
+
+	// Convert the result data to JSON
+	jsonData, err := json.Marshal(resultData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal target data: %w", err)
+	}
+
+	// Create or update the target secret
+	if targetExists {
+		_, err = c.svc.UpdateSecret(&secretsmanager.UpdateSecretInput{
+			SecretId:     aws.String(targetPath),
+			SecretString: aws.String(string(jsonData)),
+		})
+	} else {
+		_, err = c.svc.CreateSecret(&secretsmanager.CreateSecretInput{
+			Name:         aws.String(targetPath),
+			SecretString: aws.String(string(jsonData)),
+		})
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to update target secret: %w", err)
+	}
+
+	return nil
+}
+
+// CopySecretData copies secret data directly without using files
+func (c *Client) CopySecretData(data map[string]interface{}, targetPath string, options CopyOptions, configs *config.Configs) error {
+	targetExists := true
+	targetData, targetIsJSON, err := c.GetSecret(targetPath)
+	if err != nil {
+		if strings.Contains(err.Error(), "secret not found") {
+			targetExists = false
+			targetData = make(map[string]interface{})
+			// Always use JSON format for direct data operations
+			targetIsJSON = true
+		} else {
+			return fmt.Errorf("failed to get target secret: %w", err)
+		}
+	}
+
+	resultData := make(map[string]interface{})
+
+	// Start with existing target data unless pruning is enabled
+	if targetExists && targetIsJSON && !options.Prune {
+		for k, v := range targetData {
+			resultData[k] = v
+		}
+	}
+
+	for key, value := range data {
+		// Skip existing keys if not overwriting
+		if _, exists := resultData[key]; exists && !options.Overwrite {
+			continue
+		}
+
+		isRedactedKey := c.isRedactedKey(key)
+
+		// Filter keys based on copy options
 		if isRedactedKey && !options.CopySecrets && !options.CopyConfig {
 			continue
 		}
