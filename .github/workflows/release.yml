@@ -58,6 +58,7 @@ jobs:
         with:
           name: vault-promoter-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/*
+          if-no-files-found: error
 
   release:
     name: Create Release
@@ -73,6 +74,9 @@ jobs:
         with:
           path: artifacts
 
+      - name: List all artifacts
+        run: find artifacts -type f | sort
+
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
@@ -81,6 +85,81 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
+          body: |
+            ## Vault Promoter CLI Release
+            
+            ### Executables
+            - Windows: `vault-promoter-windows-amd64.zip`, `vault-promoter-windows-arm64.zip`
+            - macOS: `vault-promoter-darwin-amd64.tar.gz`, `vault-promoter-darwin-arm64.tar.gz`
+            - Linux: `vault-promoter-linux-amd64.tar.gz`, `vault-promoter-linux-arm64.tar.gz`
+            
+            Each archive contains the executable and an example config file (.vaultconfigs.example).
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  publish-executables:
+    name: Publish Standalone Executables
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v3.1.2
+        with:
+          path: executables
+      
+      - name: List executables
+        run: find executables -type f | sort
+      
+      - name: Prepare executables for publishing
+        run: |
+          mkdir -p dist
+          # Extract all archives to get the executables
+          for archive in executables/vault-promoter-*/vault-promoter-*.zip; do
+            if [ -f "$archive" ]; then
+              unzip -o "$archive" -d dist/
+            fi
+          done
+          
+          for archive in executables/vault-promoter-*/vault-promoter-*.tar.gz; do
+            if [ -f "$archive" ]; then
+              tar -xzf "$archive" -C dist/
+            fi
+          done
+          
+          # Rename executables with platform suffix for clarity
+          if [ -f dist/vault-promoter.exe ]; then
+            for platform in windows-amd64 windows-arm64; do
+              if [ -f executables/vault-promoter-$platform/vault-promoter-$platform.zip ]; then
+                cp dist/vault-promoter.exe dist/vault-promoter-$platform.exe
+              fi
+            done
+          fi
+          
+          if [ -f dist/vault-promoter ]; then
+            for platform in linux-amd64 linux-arm64 darwin-amd64 darwin-arm64; do
+              if [ -f executables/vault-promoter-$platform/vault-promoter-$platform.tar.gz ]; then
+                cp dist/vault-promoter dist/vault-promoter-$platform
+              fi
+            done
+          fi
+          
+          ls -la dist/
+      
+      - name: Upload executables to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: standalone-executables
+          path: dist/
+          retention-days: 30
+      
+      - name: Publish executables to GitHub Releases
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/*
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
