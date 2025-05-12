@@ -8,6 +8,9 @@ vault-promoter is a tool for debugging config drift and securely promoting secre
 This repository contains the configuration and tooling for:
 - Managing secrets and configurations
 - Promoting secrets between environments
+## Project status
+
+currently in the planning phase. The Cli is not ready for use.
 
 ## 🔍 Use Case
 
