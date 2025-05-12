@@ -134,7 +134,7 @@ func CopyVaultWithAWS(
 		if err != nil {
 			return nil, fmt.Errorf("failed to create Vault client: %w", err)
 		}
-		
+
 		// Ensure the KV engine exists
 		err = vaultClient.EnsureKVEngineExists(targetKV)
 		if err != nil {
@@ -249,7 +249,7 @@ func copyWithinVault(
 	if err != nil {
 		return nil, fmt.Errorf("failed to create target Vault client: %w", err)
 	}
-	
+
 	// Ensure the KV engine exists
 	err = targetClient.EnsureKVEngineExists(targetKV)
 	if err != nil {
@@ -306,9 +306,9 @@ func copyWithinAWS(
 	if err != nil {
 		return nil, fmt.Errorf("failed to create source AWS client: %w", err)
 	}
-	
+
 	// Check if source path exists
-	_, err = sourceClient.GetSecret(sourcePath)
+	_, _, err = sourceClient.GetSecret(sourcePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get source secret: %w", err)
 	}

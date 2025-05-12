@@ -486,3 +486,31 @@ func GenerateDiff(current, target string) string {
 	diffs := dmp.DiffMain(current, target, false)
 	return dmp.DiffPrettyText(diffs)
 }
+
+// WriteSecret writes a secret to the specified path
+func (c *Client) WriteSecret(path string, data map[string]interface{}) error {
+	// Check if KV engine exists
+	mountOutput, err := c.Sys().ListMounts()
+	if err != nil {
+		return fmt.Errorf("failed to list vault mounts: %w", err)
+	}
+
+	// Ensure the KV engine exists and has a trailing slash
+	kvEnginePath := c.kvEngine
+	if !strings.HasSuffix(kvEnginePath, "/") {
+		kvEnginePath += "/"
+	}
+
+	// Check if the engine exists
+	if _, exists := mountOutput[kvEnginePath]; !exists {
+		return fmt.Errorf("KV engine '%s' does not exist in Vault", c.kvEngine)
+	}
+
+	// Write the secret
+	_, err = c.KVv2(c.kvEngine).Put(context.Background(), path, data)
+	if err != nil {
+		return fmt.Errorf("failed to write secret: %w", err)
+	}
+
+	return nil
+}

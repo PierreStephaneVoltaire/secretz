@@ -21,10 +21,17 @@ type Configs struct {
 	RedactedKeys     []string                     `json:"redacted_keys,omitempty"`
 	RedactSecrets    *bool                        `json:"redact_secrets,omitempty"`
 	RedactJSONValues *bool                        `json:"redact_json_values,omitempty"`
+	SensitiveKeys    []string                     `json:"sensitive_keys,omitempty"`
 }
 
 // DefaultRedactedKeys is a list of key names that typically contain sensitive information
 var DefaultRedactedKeys = []string{
+	"password", "secret", "token", "key", "credential", "auth", "pwd", "pass",
+	"apikey", "api_key", "access_key", "secret_key", "private_key", "cert", "certificate",
+}
+
+// DefaultSensitiveKeys is a list of key names that typically contain sensitive information and should be split
+var DefaultSensitiveKeys = []string{
 	"password", "secret", "token", "key", "credential", "auth", "pwd", "pass",
 	"apikey", "api_key", "access_key", "secret_key", "private_key", "cert", "certificate",
 }
@@ -51,6 +58,14 @@ func (c *Configs) GetRedactedKeys() []string {
 		return DefaultRedactedKeys
 	}
 	return c.RedactedKeys
+}
+
+// GetSensitiveKeys returns the list of keys that should be considered sensitive for splitting
+func (c *Configs) GetSensitiveKeys() []string {
+	if len(c.SensitiveKeys) == 0 {
+		return DefaultSensitiveKeys
+	}
+	return c.SensitiveKeys
 }
 
 // ReadConfigs reads the configuration file from the given path

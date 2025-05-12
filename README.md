@@ -82,10 +82,11 @@ The CLI provides flexible, unopinionated secret/config comparison and promotion 
 
 #### Available Commands
 
-The CLI provides flexible commands for comparing and copying secrets/configs across environments and Vault instances:
+The CLI provides flexible commands for comparing, copying, and splitting secrets/configs across environments and Vault instances:
 
 - `compare` - For comparing secrets/configs across environments and Vault instances
 - `copy` - For copying secrets/configs between environments and store types (Vault and AWS Secrets Manager)
+- `split` - For extracting sensitive keys from a source path to a target path (Vault only)
 
 #### Global Flags
 
@@ -280,24 +281,105 @@ vault-promoter copy <source-env> <secret-path> <target-env> [target-path] --conf
 5. The copy operation follows these rules:
    - By default, existing keys in the target are not overwritten unless `--overwrite` is specified
    - If `--copy-config` is specified, only non-secret keys are copied
-   - If `--copy-secrets` is specified, only secret keys (matching redacted_keys) are copied
+   - If `--copy-secrets` is specified, only secret keys (matching sensitive_keys) are copied
    - If `--only-copy-keys` is specified, only the keys are copied, not the values
    - When copying from AWS Secrets Manager to Vault, non-JSON secrets cannot be copied
-   - Source: `secret/app/config1` in the `kv` engine using the `dev` environment
-   - Target: `secret/app/config2` in the `kv` engine using the `dev` environment
 
-5. For cross-instance comparison:
-   ```bash
-   vault-promoter compare secret/app/config secret/app/config --env dev --kv-engine kv --target-env prod
-   ```
-   
-   The CLI will compare:
-   - Source: `secret/app/config` in the `kv` engine using the `dev` environment
-   - Target: `secret/app/config` in the `kv` engine using the `prod` environment
+#### Command: `split`
 
-6. The comparison results show:
-   - Keys only in source path
-   - Keys only in target path
+Splits sensitive keys from a source path to a target path, removing them from the source. Only works with JSON-formatted secrets.
+
+```bash
+vault-promoter split <source-env> <source-path> <target-path> --config <config-file> --source-kv <source-kv> [--target-env <target-env>] [--target-kv <target-kv>] [--dry-run] [--approve] [--log-to <log-file>]
+```
+
+##### Required Arguments
+
+- `<source-env>` (string, required)
+  - The source environment name as defined in the config file (e.g., `dev`, `uat`, `prod`)
+
+- `<source-path>` (string, required)
+  - The path to the secret in the source environment
+
+- `<target-path>` (string, required)
+  - The path where sensitive keys will be moved to
+
+##### Required Flags
+
+- `--source-kv` (string, required)
+  - The KV engine name to use in Vault for the source path
+  - Example: `--source-kv secret`
+
+##### Optional Flags
+
+- `--target-env` (string, optional)
+  - The target environment name as defined in the config file
+  - If omitted, defaults to the source environment
+  - Example: `--target-env prod`
+
+- `--target-kv` (string, optional)
+  - The KV engine name to use in Vault for the target path
+  - If omitted, defaults to the source KV engine
+  - Example: `--target-kv secrets-sensitive`
+
+- `--dry-run` (boolean, default: false)
+  - Show what would be split without making any changes
+  - Example: `--dry-run`
+
+- `--approve` (boolean, default: false)
+  - Automatically approve the split operation without prompting
+  - Example: `--approve`
+
+- `--log-to` (string, default: `./vault-promoter-split.log`)
+  - Path to the log file for split operations
+  - Example: `--log-to /path/to/logfile.json`
+
+##### Example Invocations
+
+- Split sensitive keys from a secret to a new location in the same KV engine:
+  ```bash
+  vault-promoter split dev app/config app/config-sensitive --config .vaultconfigs --source-kv secret
+  ```
+
+- Split sensitive keys to a different KV engine:
+  ```bash
+  vault-promoter split dev app/config app/config-sensitive --config .vaultconfigs --source-kv secret --target-kv sensitive-secrets
+  ```
+
+- Preview what would be split without making changes:
+  ```bash
+  vault-promoter split dev app/config app/config-sensitive --config .vaultconfigs --source-kv secret --dry-run
+  ```
+
+- Split sensitive keys with automatic approval:
+  ```bash
+  vault-promoter split dev app/config app/config-sensitive --config .vaultconfigs --source-kv secret --approve
+  ```
+
+##### How Split Works
+
+1. The CLI uses the `--source-env` parameter to determine the source environment and authenticate with Vault.
+
+2. The source secret is retrieved from `<source-kv>/<source-path>`.
+
+3. The CLI checks if the target path already exists. If it does, the operation fails to prevent accidental overwriting.
+
+4. The CLI identifies sensitive keys in the source based on the `sensitive_keys` list in the config file.
+
+5. The split operation follows these steps in order (for safety):
+   - First, create a new secret at the target path containing only the sensitive keys
+   - Then, update the source secret to remove the sensitive keys
+   - This ensures sensitive data is never lost during the operation
+
+6. If no sensitive keys are found in the source, the operation fails.
+
+7. All operations are logged to the specified log file in JSON format.
+
+##### Output
+
+- The CLI outputs a summary of the split operation, showing:
+  - Number of sensitive keys moved
+  - Names of the keys that were moved
    - Keys present in both but with different values (with redaction applied according to config)
 
 ##### Output
