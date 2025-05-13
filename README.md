@@ -87,9 +87,9 @@ The CLI provides flexible, unopinionated secret/config comparison and promotion 
 
 The CLI provides flexible commands for comparing, copying, and splitting secrets/configs across environments and Vault instances:
 
-- `compare` - For comparing secrets/configs across environments and Vault instances
+- `compare` - For comparing secrets/configs across environments, aws accounts and Vault instances
 - `copy` - For copying secrets/configs between environments and store types (Vault and AWS Secrets Manager)
-- `split` - For extracting sensitive keys from a source path to a target path (Vault only)
+- `split` - For extracting sensitive keys from a source path to a target path (Vault and AWS Secrets Manager)
 
 #### Global Flags
 
